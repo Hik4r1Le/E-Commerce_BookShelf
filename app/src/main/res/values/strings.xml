@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Bookstore</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="title_cart">Cart</string>
+    <string name="title_profile">Profile</string>
+    <string name="title_orders">Orders</string>
+    <string name="book1_name">Tâm lý học và đời sống</string>
+    <string name="book1_author">Zimbardo</string>
+    <string name="book1_price">250,000</string>
+    <string name="book2_name">Sach gi do, no idea</string>
+    <string name="book2_author">chiu day</string>
+    <string name="book2_price">123,456</string>
+</resources>

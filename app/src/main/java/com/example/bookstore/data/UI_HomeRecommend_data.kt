@@ -19,7 +19,14 @@ class UI_HomeRecommend_data() {
                 name = R.string.book2_name,
                 imageID = R.drawable.book2,
                 star = 3.5f
-            )
+            ),
+            UI_HomeRecommend(
+                author = R.string.book2_author,
+                price = R.string.book2_price,
+                name = R.string.book2_name,
+                imageID = R.drawable.book2,
+                star = 3.5f
+        )
         )
     }
 }

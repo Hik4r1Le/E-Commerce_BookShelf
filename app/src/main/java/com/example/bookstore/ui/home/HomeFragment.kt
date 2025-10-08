@@ -6,6 +6,7 @@ import android.view.View
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,6 +54,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.unit.sp
+import androidx.navigation.fragment.findNavController
 import com.example.bookstore.data.UI_HomeBestSeller_data
 import com.example.bookstore.data.UI_HomeRecommend_data
 import com.example.bookstore.ui.theme.BookstoreTheme
@@ -65,14 +67,18 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
-                HomeScreen()
+                HomeScreen(
+                    onBookClick = {
+                        findNavController().navigate(R.id.home_to_bookDetail)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onBookClick: () -> Unit) {
     Column(modifier = Modifier
         //.padding(16.dp)
         .fillMaxSize(),
@@ -95,7 +101,8 @@ fun HomeScreen() {
                     modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
                 )
                 BestSellerCard(
-                    bestSellerBooks = UI_HomeBestSeller_data().loadData()
+                    bestSellerBooks = UI_HomeBestSeller_data().loadData(),
+                    onBookClick = onBookClick
                 )
             }
             item {
@@ -106,7 +113,8 @@ fun HomeScreen() {
                     modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
                 )
                 RecommendedList(
-                    recommendedBooks = UI_HomeRecommend_data().loadData()
+                    recommendedBooks = UI_HomeRecommend_data().loadData(),
+                    onBookClick = onBookClick
                 )
             }
         }
@@ -153,6 +161,7 @@ fun HomeHeader(
 @Composable
 fun BestSellerCard(
     bestSellerBooks: List<UI_HomeBestSeller>,
+    onBookClick: () -> Unit,
     modifier: Modifier = Modifier) {
     Card(modifier = modifier
         .fillMaxWidth()
@@ -161,7 +170,8 @@ fun BestSellerCard(
             width = 4.dp,
             shape = RoundedCornerShape(12.dp),
             color = Color(color = 0xFFF2AEBB)
-        ),
+        )
+        .clickable { onBookClick()},
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4))
     ) {
         LazyRow(
@@ -186,6 +196,7 @@ fun BestSellerCard(
 
 @Composable
 fun RecommendedCard(recommend: UI_HomeRecommend,
+                    onBookClick: () -> Unit,
                     modifier: Modifier = Modifier) {
     Card(modifier = modifier
         .fillMaxWidth()
@@ -194,7 +205,8 @@ fun RecommendedCard(recommend: UI_HomeRecommend,
             width = 4.dp,
             shape = RoundedCornerShape(12.dp),
             color = Color(color = 0xFFF2AEBB)
-        ),
+        )
+        .clickable { onBookClick()},
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4))
     ) {
         Row(
@@ -272,12 +284,16 @@ fun DisplayStar(star: Float) {
 
 @Composable
 fun RecommendedList(recommendedBooks: List<UI_HomeRecommend>,
+                    onBookClick: () -> Unit,
                     modifier: Modifier = Modifier) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         recommendedBooks.forEach { book ->
-            RecommendedCard(recommend = book)
+            RecommendedCard(
+                recommend = book,
+                onBookClick = onBookClick
+                )
         }
     }
 }
@@ -289,7 +305,8 @@ fun HomeFragmentPreview(){
         UI_HomeBestSeller(imageID = R.drawable.book1),
         UI_HomeBestSeller(imageID = R.drawable.book2)
     )
-    BestSellerCard(sampleList)
+    BestSellerCard(sampleList,
+        onBookClick = {})
 }
 @Preview
 @Composable
@@ -310,13 +327,17 @@ fun HomeFragmentPreview2(){
             star = 3.5f
         )
     )
-    RecommendedList(sampleList)
+    RecommendedList(sampleList,
+        onBookClick = {})
 }
 
-@Preview (showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview (
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun HomeFragmentPreview3(){
     BookstoreTheme {
-        HomeScreen()
+        HomeScreen(onBookClick = {})
     }
 }

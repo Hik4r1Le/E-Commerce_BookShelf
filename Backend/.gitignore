@@ -1,0 +1,5 @@
+node_modules
+.env
+prisma/ca.pem
+/generated/prisma
+firebase-admin-key.json

@@ -10,15 +10,16 @@
         android:name="com.example.bookstore.ui.home.HomeFragment"
         android:label="@string/title_home"
         tools:layout="@layout/fragment_home" />
+    <action
+        android:id="@+id/home_to_bookDetail"
+        app:destination="@id/navigation_book_detail" />
 
     <fragment
         android:id="@+id/navigation_cart"
         android:name="com.example.bookstore.ui.cart.CartFragment"
         android:label="@string/title_cart"
         tools:layout="@layout/fragment_cart" />
-         <action
-            android:id="@+id/home_to_bookDetail"
-            app:destination="@id/navigation_book_detail" />
+
 
     <fragment
         android:id="@+id/navigation_orders"

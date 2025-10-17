@@ -175,29 +175,52 @@ fun CartScreen(
     }
 }
 
-@Preview(showBackground = true)
+@Preview
 @Composable
-fun CartScreenPreview() {
-    CartScreen(
-        cartItems = mutableStateListOf(
-            CartItemData(1, "Sách A", "Tác giả A", 100000, 1, R.drawable.book1),
-            CartItemData(2, "Sách B", "Tác giả B", 85000, 2, R.drawable.book2),
-            CartItemData(3, "Sách C", "Tác giả C", 120000, 1, R.drawable.book3)
+fun CartItemCardPreview() {
+    CartItemCard(
+        item = CartItemData(
+            id = 1,
+            name = "Sách A",
+            author = "Tác giả A",
+            price = 100000,
+            quantity = 1,
+            imageRes = R.drawable.book1
         ),
-        onNavigateBack = {},
-        onCheckout = {}
+        onQuantityChange = {},
+        onRemoveItem = {}
     )
 }
 
+// Toàn màn hình Cart light
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun CartScreenPreviewLight() {
+    BookstoreTheme {
+        CartScreen(
+            cartItems = mutableStateListOf(
+                CartItemData(1, "Sách A", "Tác giả A", 100000, 1, R.drawable.book1),
+                CartItemData(2, "Sách B", "Tác giả B", 85000, 2, R.drawable.book2),
+                CartItemData(3, "Sách C", "Tác giả C", 120000, 1, R.drawable.book3)
+            ),
+            onNavigateBack = {},
+            onCheckout = {}
+        )
+    }
+}
+
+// Toàn màn hình Cart dark
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun CartScreenPreviewDark() {
-    CartScreen(
-        cartItems = mutableStateListOf(
-            CartItemData(1, "Sách A", "Tác giả A", 100000, 1, R.drawable.book1),
-            CartItemData(2, "Sách B", "Tác giả B", 85000, 2, R.drawable.book2)
-        ),
-        onNavigateBack = {},
-        onCheckout = {}
-    )
+    BookstoreTheme {
+        CartScreen(
+            cartItems = mutableStateListOf(
+                CartItemData(1, "Sách A", "Tác giả A", 100000, 1, R.drawable.book1),
+                CartItemData(2, "Sách B", "Tác giả B", 85000, 2, R.drawable.book2)
+            ),
+            onNavigateBack = {},
+            onCheckout = {}
+        )
+    }
 }

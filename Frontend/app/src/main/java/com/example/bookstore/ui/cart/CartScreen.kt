@@ -35,7 +35,7 @@ data class CartItemData(
 
 @Composable
 fun CartScreen(
-    cartItems: MutableList<CartItemData>, // nhận danh sách từ Fragment
+    cartItems: MutableList<CartItemData>, 
     onNavigateBack: () -> Unit,
     onCheckout: () -> Unit
 ) {

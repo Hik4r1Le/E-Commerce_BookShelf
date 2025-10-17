@@ -1,5 +1,6 @@
 package com.example.bookstore.ui.cart
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bookstore.R
@@ -35,11 +37,10 @@ data class CartItemData(
 
 @Composable
 fun CartScreen(
-    cartItems: MutableList<CartItemData>, 
+    cartItems: MutableList<CartItemData>,
     onNavigateBack: () -> Unit,
     onCheckout: () -> Unit
 ) {
-    // Tổng tiền realtime
     val totalPrice by derivedStateOf { cartItems.sumOf { it.price * it.quantity } }
 
     Column(
@@ -47,7 +48,6 @@ fun CartScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        // TopBar với badge
         TopAppBar(
             title = { Text("Giỏ hàng") },
             navigationIcon = {
@@ -85,7 +85,6 @@ fun CartScreen(
             elevation = 4.dp
         )
 
-        // Danh sách CartItem
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -110,7 +109,7 @@ fun CartScreen(
                     ) {
                         Checkbox(
                             checked = true,
-                            onCheckedChange = { /* TODO: xử lý chọn */ }
+                            onCheckedChange = { /* TODO */ }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Image(
@@ -127,7 +126,6 @@ fun CartScreen(
                             Text(item.author, fontSize = 14.sp, color = Color.Gray)
                             Text("${item.price}₫", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
-                        // Số lượng
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = {
                                 if (quantity > 1) quantity--
@@ -144,9 +142,7 @@ fun CartScreen(
                                 item.quantity = quantity
                             }) { Text("+", fontSize = 20.sp) }
                         }
-                        IconButton(onClick = {
-                            cartItems.remove(item)
-                        }) {
+                        IconButton(onClick = { cartItems.remove(item) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Xóa")
                         }
                     }
@@ -154,7 +150,6 @@ fun CartScreen(
             }
         }
 
-        // Footer tổng tiền + Mua hàng
         Card(
             elevation = 8.dp,
             modifier = Modifier
@@ -178,4 +173,31 @@ fun CartScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CartScreenPreview() {
+    CartScreen(
+        cartItems = mutableStateListOf(
+            CartItemData(1, "Sách A", "Tác giả A", 100000, 1, R.drawable.book1),
+            CartItemData(2, "Sách B", "Tác giả B", 85000, 2, R.drawable.book2),
+            CartItemData(3, "Sách C", "Tác giả C", 120000, 1, R.drawable.book3)
+        ),
+        onNavigateBack = {},
+        onCheckout = {}
+    )
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun CartScreenPreviewDark() {
+    CartScreen(
+        cartItems = mutableStateListOf(
+            CartItemData(1, "Sách A", "Tác giả A", 100000, 1, R.drawable.book1),
+            CartItemData(2, "Sách B", "Tác giả B", 85000, 2, R.drawable.book2)
+        ),
+        onNavigateBack = {},
+        onCheckout = {}
+    )
 }

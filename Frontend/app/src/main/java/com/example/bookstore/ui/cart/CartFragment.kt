@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.example.bookstore.R
 import com.example.bookstore.ui.theme.BookstoreTheme
 
-// Dữ liệu mẫu giỏ hàng
+// Dữ liệu mẫu
 data class CartItem(
     val id: Int,
     val name: String,
@@ -45,7 +45,7 @@ fun sampleCartItems() = listOf(
     CartItem(4, "Kính Vạn Hoa", "Nguyễn Nhật Ánh", 86000, R.drawable.book4)
 )
 
-// Cart Screen chính
+// Cart Screen 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(

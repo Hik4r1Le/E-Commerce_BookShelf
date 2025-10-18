@@ -92,6 +92,7 @@ fun HomeScreen(onBookClick: () -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(12.dp)
         ) {
             item {
                 Text(

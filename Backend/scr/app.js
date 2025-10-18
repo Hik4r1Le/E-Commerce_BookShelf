@@ -1,3 +1,7 @@
+// Load environment variable
+import dotenv from "dotenv";
+dotenv.config();
+
 // Import libraries
 import express from "express"
 import path from "path"
@@ -7,6 +11,7 @@ import bodyParser from "body-parser"
 import methodOverride from "method-override"
 import cors from "cors"
 import session from "express-session"
+import errorHandler from "./middlewares/error.middleware.js"
 // const passport = require("./config/passport");
 
 // Import database connectors
@@ -25,6 +30,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded
 app.use(cookieParser()); // Cookie parser
 app.use(bodyParser.json()); // Parser body form
 app.use(methodOverride("_method")); // Override methods
+app.use(errorHandler); // handle logging error and return error to client
 // app.use(
 //     cors({
 //         origin: ["http://localhost:5173", "http://localhost:3000"],

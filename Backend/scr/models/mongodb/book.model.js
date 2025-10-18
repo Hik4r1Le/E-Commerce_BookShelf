@@ -8,6 +8,7 @@ const bookSchema = new mongoose.Schema(
     subtitle: { type: String },
     authors: [{ type: String }],
     description: { type: String },
+    cover_image: { type: String },
     publisher: { type: String },
     publish_date: { type: Date },
     category_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],

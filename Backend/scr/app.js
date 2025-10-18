@@ -1,20 +1,19 @@
 // Import libraries
-const express = require("express");
-const path = require("path");
-const morgan = require("morgan");
-const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
-const methodOverride = require("method-override");
-const cors = require("cors");
-const session = require("express-session");
+import express from "express"
+import path from "path"
+import morgan from "morgan"
+import cookieParser from "cookie-parser"
+import bodyParser from "body-parser"
+import methodOverride from "method-override"
+import cors from "cors"
+import session from "express-session"
 // const passport = require("./config/passport");
 
 // Import database connectors
-const connectMongoDb = require("./config/mongodb");
-const { admin } = require("./config/firebase");
+import connectMongoDB from "./config/mongodb.config.js"
 
 // Connect to database
-connectMongoDb();
+connectMongoDB();
 
 // Initialize Express
 const app = express();
@@ -50,7 +49,8 @@ app.use(methodOverride("_method")); // Override methods
 
 
 // Import & Initialize routes
-const route = require("./routes");
+import route from "./routes/index.js"
 route(app);
 
-module.exports = app;
+export default app;
+

@@ -8,8 +8,8 @@ datasource db {
 }
 
 enum Role {
-  user
   admin
+  user
   seller
 }
 
@@ -19,280 +19,168 @@ enum Gender {
   others
 }
 
-enum BookFormat {
-  paperback
-  hardcover
-  ebook
-  audiobook
+enum AddressLabel {
+  home
+  office
 }
 
-enum Condition {
-  new
-  used
-}
-
-enum BookStatus {
-  active
-  inactive
-}
-
-enum CouponType {
-  percent
-  fixed
-}
-
-enum PaymentMethod {
-  cod
-  card
-  momo
-  bank
+enum StockStatus {
+  in_stock
+  out_of_stock
 }
 
 enum OrderStatus {
   processing
-  shipped
-  delivered
-  cancelled
   refunded
+  shipped
+  delivering
+  cancelled
+}
+
+enum DiscountType {
+  fixed
+  percentage
 }
 
 model User {
-  id        String    @id @default(uuid()) @db.Char(36)
-  email     String    @unique @db.VarChar(255)
-  passwordHash String @map("password_hash") @db.VarChar(255)
-  name      String    @db.VarChar(255)
-  role      Role      @default(user)
-  isVerified Boolean  @map("is_verified") @default(false)
-  createdAt DateTime  @map("created_at") @default(now())
-  updatedAt DateTime  @map("updated_at") @updatedAt
-  deletedAt DateTime? @map("deleted_at")
+  id             String        @id @default(uuid()) @db.VarChar(255)
+  email          String?       @unique @db.VarChar(255)
+  password_hash  String?       @db.VarChar(255)
+  role           Role?         @default(user)
+  is_veryfied    Boolean?
+  created_at     DateTime?     @db.Timestamp(6)
+  updated_at     DateTime?     @db.Timestamp(6)
+  deleted_at     DateTime?     @db.Timestamp(6)
 
-  profile    UserProfile?       @relation("UserToProfile")
-  addresses  Address[]          @relation("UserAddresses")
-  carts      Cart[]             @relation("UserCarts")
-  orders     Order[]            @relation("UserOrders")
-  changedOrderStatuses OrderStatusHistory[] @relation("ChangedByUser")
+  profile        UserProfile?   
+  addresses      Address[]
+  stocks         Stock[]
+  carts          Cart[]
+  orders         Order[]
 
   @@map("users")
 }
 
 model UserProfile {
-  userId    String   @id @db.Char(36) @map("user_id")
-  dob       DateTime? @map("dob")
-  gender    Gender?  @map("gender")
-  avatarUrl String?  @map("avatar_url") @db.VarChar(255)
-  bio       String?  @db.Text
+  id         String   @id @default(uuid()) @db.VarChar(255)
+  user_id    String   @unique @db.VarChar(255)   
+  full_name  String?  @db.VarChar(255)
+  dob        DateTime? @db.Date
+  gender     Gender?   @default(male)
+  avatar_url String?   @db.VarChar(255)
 
-  user      User     @relation("UserToProfile", fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [user_id], references: [id])
 
   @@map("user_profiles")
 }
 
-model Author {
-  id        String   @id @default(uuid()) @db.Char(36)
-  name      String   @db.VarChar(255)
-  bio       String?  @db.Text
-  createdAt DateTime @map("created_at") @default(now())
-  updatedAt DateTime @map("updated_at") @updatedAt
-  deletedAt DateTime? @map("deleted_at")
-
-  bookAuthors BookAuthor[]
-
-  @@index([name])
-  @@map("authors")
-}
-
-model Category {
-  id        String   @id @default(uuid()) @db.Char(36)
-  name      String   @db.VarChar(255)
-  createdAt DateTime @map("created_at") @default(now())
-  updatedAt DateTime @map("updated_at") @updatedAt
-  deletedAt DateTime? @map("deleted_at")
-
-  bookCategories BookCategory[]
-
-  @@unique([name])
-  @@map("categories")
-}
-
-model Book {
-  id               String        @id @default(uuid()) @db.Char(36)
-  isbn             String?       @unique @db.VarChar(20)
-  title            String        @db.VarChar(255)
-  shortDescription String?       @map("short_description") @db.Text
-  description      String?       @db.LongText
-  publisher        String?       @db.VarChar(255)
-  publishDate      DateTime?     @map("publish_date")
-  pages            Int?
-  language         String?       @db.VarChar(64)
-  format           BookFormat?
-  condition        Condition     @default(new)
-  price            Decimal       @db.Decimal(10,2) @default("0.00")
-  stockQuantity    Int           @map("stock_quantity") @default(0)
-  status           BookStatus    @default(active)
-  createdAt        DateTime      @map("created_at") @default(now())
-  updatedAt        DateTime      @map("updated_at") @updatedAt
-  deletedAt        DateTime?     @map("deleted_at")
-
-  bookAuthors      BookAuthor[]
-  bookCategories   BookCategory[]
-  images           BookImage[]
-  cartItems        CartItem[]
-  orderItems       OrderItem[]
-
-  @@index([title])
-  @@map("books")
-}
-
-model BookAuthor {
-  bookId   String  @db.Char(36)
-  authorId String  @db.Char(36)
-
-  book     Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  author   Author  @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  @@id([bookId, authorId])
-  @@map("book_authors")
-}
-
-model BookCategory {
-  bookId     String   @db.Char(36)
-  categoryId String   @db.Char(36)
-
-  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@id([bookId, categoryId])
-  @@map("book_categories")
-}
-
-model BookImage {
-  id        String   @id @default(uuid()) @db.Char(36)
-  bookId    String   @db.Char(36)
-  url       String   @db.VarChar(255)
-  alt       String?  @db.VarChar(255)
-  createdAt DateTime @map("created_at") @default(now())
-
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-
-  @@map("book_images")
-}
-
 model Address {
-  id         String   @id @default(uuid()) @db.Char(36)
-  userId     String   @db.Char(36)
-  label      String?  @db.VarChar(100)
-  receiverName String @map("receiver_name") @db.VarChar(255)
-  phone      String   @db.VarChar(32)
-  province   String?  @db.VarChar(255)
-  district   String?  @db.VarChar(255)
-  street     String?  @db.VarChar(255)
-  createdAt  DateTime @map("created_at") @default(now())
-  updatedAt  DateTime @map("updated_at") @updatedAt
-  deletedAt  DateTime? @map("deleted_at")
+  id             String        @id @default(uuid()) @db.VarChar(255)
+  user_id        String?       @db.VarChar(255)
+  label          AddressLabel? @default(home)
+  recipient_name String?       @db.VarChar(255)
+  phone_number   String?       @db.VarChar(255)
+  street         String?       @db.VarChar(255)
+  district       String?       @db.VarChar(255)
+  city           String?       @db.VarChar(255)
+  is_default     Boolean?
 
-  user       User     @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
-  orders     Order[]  @relation("AddressOrders")
+  user           User?         @relation(fields: [user_id], references: [id])
 
   @@map("addresses")
 }
 
-model Cart {
-  id         String    @id @default(uuid()) @db.Char(36)
-  userId     String?   @db.Char(36)
-  sessionId  String?   @map("session_id") @db.VarChar(255)
-  createdAt  DateTime  @map("created_at") @default(now())
-  updatedAt  DateTime  @map("updated_at") @updatedAt
-  deletedAt  DateTime? @map("deleted_at")
+model Stock {
+  id             String       @id @default(uuid()) @db.VarChar(255)
+  book_id        String?      @db.VarChar(255)
+  user_id        String?      @db.VarChar(255)
+  stock_quantity Int?
+  stock_status   StockStatus? @default(in_stock)
+  created_at     DateTime?    @db.Timestamp(6)
+  updated_at     DateTime?    @db.Timestamp(6)
+  deleted_at     DateTime?    @db.Timestamp(6)
 
-  user       User?     @relation("UserCarts", fields: [userId], references: [id], onDelete: SetNull)
-  items      CartItem[] @relation("CartItems")
+  user           User?        @relation(fields: [user_id], references: [id])
+  cartDetails    CartDetail[]
+  orderDetails   OrderDetail[]
+
+  @@map("stocks")
+}
+
+model Cart {
+  id         String      @id @default(uuid()) @db.VarChar(255)
+  user_id    String?     @db.VarChar(255)
+  created_at DateTime?   @db.Timestamp(6)
+  updated_at DateTime?   @db.Timestamp(6)
+  deleted_at DateTime?   @db.Timestamp(6)
+
+  user       User?       @relation(fields: [user_id], references: [id])
+  cartItems  CartDetail[] @relation("CartToCartDetails")
 
   @@map("carts")
 }
 
-model CartItem {
-  id         String   @id @default(uuid()) @db.Char(36)
-  cartId     String   @db.Char(36)
-  bookId     String   @db.Char(36)
-  quantity   Int      @default(1)
-  unitPrice  Decimal  @db.Decimal(10,2) @default("0.00")
-  totalPrice Decimal  @map("total_price") @db.Decimal(10,2)
+model CartDetail {
+  id           String   @id @default(uuid()) @db.VarChar(255)
+  cart_id      String?  @db.VarChar(255)
+  stock_id     String?  @db.VarChar(255)
+  book_id      String?  @db.VarChar(255)
+  quantity     Int?
+  price_at_add Decimal? @db.Decimal(10, 2)
 
-  cart       Cart     @relation("CartItems", fields: [cartId], references: [id], onDelete: Cascade)
-  book       Book     @relation(fields: [bookId], references: [id])
+  cart         Cart?    @relation("CartToCartDetails", fields: [cart_id], references: [id])
+  stock        Stock?   @relation(fields: [stock_id], references: [id])
 
-  @@index([cartId])
-  @@map("cart_items")
-}
-
-model Coupon {
-  id             String   @id @default(uuid()) @db.Char(36)
-  code           String   @unique @db.VarChar(100)
-  type           CouponType @default(percent)
-  value          Decimal  @db.Decimal(10,2) @default("0.00")
-  usageLimit     Int?     @map("usage_limit")
-  minOrderAmount Decimal? @map("min_order_amount") @db.Decimal(10,2)
-  usedCount      BigInt   @map("used_count") @default(0)
-  active         Boolean  @default(true)
-  startsAt       DateTime? @map("starts_at")
-  expiresAt      DateTime? @map("expires_at")
-
-  orders         Order[]  @relation("CouponOrders")
-
-  @@map("coupons")
+  @@map("cart_details")
 }
 
 model Order {
-  id          String   @id @default(uuid()) @db.Char(36)
-  userId      String   @db.Char(36)
-  addressId   String   @db.Char(36)
-  couponId    String?  @db.Char(36)
-  shippingFee Decimal  @map("shipping_fee") @db.Decimal(10,2) @default("0.00")
-  paymentMethod PaymentMethod @map("payment_method")
-  status      OrderStatus @default(processing)
-  subtotal    Decimal  @db.Decimal(12,2) @default("0.00")
-  total       Decimal  @db.Decimal(12,2) @default("0.00")
-  createdAt   DateTime @map("created_at") @default(now())
-  updatedAt   DateTime @map("updated_at") @updatedAt
-  deletedAt   DateTime? @map("deleted_at")
+  id         String        @id @default(uuid()) @db.VarChar(255)
+  user_id    String?       @db.VarChar(255)
+  created_at DateTime?     @db.Timestamp(6)
+  updated_at DateTime?     @db.Timestamp(6)
+  deleted_at DateTime?     @db.Timestamp(6)
 
-  user        User     @relation("UserOrders", fields: [userId], references: [id])
-  address     Address  @relation("AddressOrders", fields: [addressId], references: [id])
-  coupon      Coupon?  @relation("CouponOrders", fields: [couponId], references: [id])
-  items       OrderItem[]
-  statusHistory OrderStatusHistory[]
+  user       User?         @relation(fields: [user_id], references: [id])
+  details    OrderDetail[]
 
-  @@index([userId])
   @@map("orders")
 }
 
-model OrderItem {
-  id         String   @id @default(uuid()) @db.Char(36)
-  orderId    String   @db.Char(36)
-  bookId     String   @db.Char(36)
-  quantity   Int
-  unitPrice  Decimal  @db.Decimal(10,2)
-  totalPrice Decimal  @map("total_price") @db.Decimal(12,2)
+model OrderDetail {
+  id           String   @id @default(uuid()) @db.VarChar(255)
+  order_id     String?  @db.VarChar(255)
+  book_id      String?  @db.VarChar(255)
+  address_id   String?  @db.VarChar(255)
+  coupon_id    String?  @db.VarChar(255)
+  stock_id     String?  @db.VarChar(255)
+  quantity     Int?
+  shipping_fee Decimal? @db.Decimal(10, 2)
+  total_price  Decimal? @db.Decimal(10, 2)
+  status       OrderStatus? @default(processing)
 
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  book       Book     @relation(fields: [bookId], references: [id])
+  order        Order?   @relation(fields: [order_id], references: [id])
+  address      Address? @relation(fields: [address_id], references: [id])
+  coupon       Coupon?  @relation(fields: [coupon_id], references: [id])
+  stock        Stock?   @relation(fields: [stock_id], references: [id])
 
-  @@index([orderId])
-  @@map("order_items")
+  @@map("order_details")
 }
 
-model OrderStatusHistory {
-  id        String     @id @default(uuid()) @db.Char(36)
-  orderId   String     @db.Char(36)
-  oldStatus OrderStatus @map("old_status")
-  newStatus OrderStatus @map("new_status")
-  changedBy String?    @map("changed_by") @db.Char(36)
-  note      String?    @db.Text
-  changedAt DateTime   @map("changed_at") @default(now())
+model Coupon {
+  id             String    @id @default(uuid()) @db.VarChar(255)
+  code           String?   @unique @db.VarChar(255)
+  discount_type  DiscountType? @default(percentage)
+  discount_value Decimal?  @db.Decimal(10, 2)
+  usage_limit    Int?
+  used_count     Int?
+  start_date     DateTime? @db.DateTime(0)
+  end_date       DateTime? @db.DateTime(0)
+  created_at     DateTime? @db.Timestamp(6)
+  updated_at     DateTime? @db.Timestamp(6)
+  deleted_at     DateTime? @db.Timestamp(6)
 
-  order     Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  changedByUser User?  @relation("ChangedByUser", fields: [changedBy], references: [id], onDelete: SetNull)
+  orderDetails   OrderDetail[]
 
-  @@map("order_status_history")
+  @@map("coupons")
 }

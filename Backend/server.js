@@ -1,6 +1,8 @@
-require("dotenv").config(); // Load environment variable
-const app = require("./scr/app");
+// Load environment variable
+import dotenv from "dotenv";
+import app from "./scr/app.js"
 
+dotenv.config();
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () =>

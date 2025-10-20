@@ -45,6 +45,7 @@ enum DiscountType {
 model User {
   id             String        @id @default(uuid()) @db.VarChar(255)
   email          String?       @unique @db.VarChar(255)
+  user_name      String?       @db.VarChar(255)
   password_hash  String?       @db.VarChar(255)
   role           Role?         @default(user)
   is_veryfied    Boolean?
@@ -86,6 +87,7 @@ model Address {
   is_default     Boolean?
 
   user           User?         @relation(fields: [user_id], references: [id])
+  orderDetails   OrderDetail[]
 
   @@map("addresses")
 }

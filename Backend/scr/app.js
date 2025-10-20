@@ -16,9 +16,11 @@ import errorHandler from "./middlewares/error.middleware.js"
 
 // Import database connectors
 import connectMongoDB from "./config/mongodb.config.js"
+import { testConnectionPrisma } from "./config/prisma.config.js"
 
 // Connect to database
 connectMongoDB();
+testConnectionPrisma();
 
 // Initialize Express
 const app = express();

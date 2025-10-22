@@ -32,7 +32,7 @@ import com.example.bookstore.R
 import com.example.bookstore.ui.theme.BookstoreTheme
 
 // Fragment
-class RegisterFragment : Fragment() {
+class RegisterFragment : Fragment(R.layout.fragment_register) {
     override fun onCreateView(
         inflater: android.view.LayoutInflater,
         container: android.view.ViewGroup?,

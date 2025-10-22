@@ -50,7 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.style.TextAlign
 
-class BookDetailFragment : Fragment(R.layout.fragment_home) {
+class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)

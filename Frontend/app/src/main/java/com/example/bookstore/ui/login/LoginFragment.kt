@@ -52,11 +52,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookstore.model.LoginCredentials
 import com.example.bookstore.ui.theme.BookstoreTheme
+import androidx.fragment.app.viewModels
 
 
 class LoginFragment : Fragment(R.layout.fragment_login) {
+
+    private val viewModel: LoginViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -64,8 +68,11 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
-                LoginScreen (
-
+                LoginScreen(
+                    viewModel = viewModel,
+                    onLogin = { /* navigate to home */ },
+                    onForgotPassword = {},
+                    onGoogleLogin = {},
                 )
             }
         }
@@ -74,34 +81,88 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
 @Composable
 fun LoginScreen(
-    onRegisterClick: () -> Unit = {},
-    onForgotPassword: () -> Unit = {},
-    onLogin: (LoginCredentials) -> Unit = {},
-    onGoogleLogin: () -> Unit = {}
+    viewModel: LoginViewModel = viewModel(),
+    onForgotPassword: () -> Unit,
+    onGoogleLogin: () -> Unit,
+    onLogin: () -> Unit = {}
 ) {
+    val credentials = viewModel.credentials
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
+    var passwordVisible by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF9F9F9)),
-        verticalArrangement = Arrangement.Top,
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LoginHeader(onRegisterClick = onRegisterClick)
+        // Username
+        OutlinedTextField(
+            value = credentials.username,
+            onValueChange = { viewModel.onUsernameChange(it) },
+            label = { Text("Tên tài khoản") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        )
 
-        Box(
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Password
+        OutlinedTextField(
+            value = credentials.password,
+            onValueChange = { viewModel.onPasswordChange(it) },
+            label = { Text("Mật khẩu") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            trailingIcon = {
+                val icon = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(icon, contentDescription = null)
+                }
+            },
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Quên mật khẩu?",
+            color = Color.Gray,
+            fontSize = 14.sp,
+            textAlign = TextAlign.End,
+            fontWeight = FontWeight.Light,
             modifier = Modifier
-                .offset(y = (-32).dp) // pulls the white form up slightly
+                .align(Alignment.End)
+                .clickable { onForgotPassword() }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = { viewModel.login(onSuccess = onLogin) },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF48FB1)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                .background(Color.White)
-                .padding(24.dp)
+                .height(48.dp),
+            enabled = !isLoading
         ) {
-            LoginForm(
-                onLogin = onLogin,
-                onForgotPassword = onForgotPassword,
-                onGoogleLogin = onGoogleLogin
+            Text(if (isLoading) "Đang đăng nhập..." else "Đăng nhập", fontWeight = FontWeight.Bold, color = Color.White)
+        }
+
+        errorMessage?.let {
+            Text(
+                text = it,
+                color = Color.Red,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        GoogleLoginButton(onClick = onGoogleLogin)
     }
 }
 

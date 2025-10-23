@@ -69,8 +69,8 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
         composeView.setContent {
             BookstoreTheme {
                 LoginScreen(
-                    viewModel = viewModel,
-                    onLogin = { /* navigate to home */ },
+                    onRegisterClick = { /* navigate to register */ },
+                    onLogin = { credentials -> viewModel.login(onSuccess = { /* navigate home */ }) },
                     onForgotPassword = {},
                     onGoogleLogin = {},
                 )
@@ -81,88 +81,34 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel = viewModel(),
-    onForgotPassword: () -> Unit,
-    onGoogleLogin: () -> Unit,
-    onLogin: () -> Unit = {}
+    onRegisterClick: () -> Unit = {},
+    onForgotPassword: () -> Unit = {},
+    onLogin: (LoginCredentials) -> Unit = {},
+    onGoogleLogin: () -> Unit = {}
 ) {
-    val credentials = viewModel.credentials
-    val isLoading = viewModel.isLoading
-    val errorMessage = viewModel.errorMessage
-    var passwordVisible by remember { mutableStateOf(false) }
-
     Column(
         modifier = Modifier
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
+            .fillMaxSize()
+            .background(Color(0xFFF9F9F9)),
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Username
-        OutlinedTextField(
-            value = credentials.username,
-            onValueChange = { viewModel.onUsernameChange(it) },
-            label = { Text("Tên tài khoản") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        )
+        LoginHeader(onRegisterClick = onRegisterClick)
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Password
-        OutlinedTextField(
-            value = credentials.password,
-            onValueChange = { viewModel.onPasswordChange(it) },
-            label = { Text("Mật khẩu") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            trailingIcon = {
-                val icon = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(icon, contentDescription = null)
-                }
-            },
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Quên mật khẩu?",
-            color = Color.Gray,
-            fontSize = 14.sp,
-            textAlign = TextAlign.End,
-            fontWeight = FontWeight.Light,
+        Box(
             modifier = Modifier
-                .align(Alignment.End)
-                .clickable { onForgotPassword() }
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = { viewModel.login(onSuccess = onLogin) },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF48FB1)),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
+                .offset(y = (-32).dp) // pulls the white form up slightly
                 .fillMaxWidth()
-                .height(48.dp),
-            enabled = !isLoading
+                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .background(Color.White)
+                .padding(24.dp)
         ) {
-            Text(if (isLoading) "Đang đăng nhập..." else "Đăng nhập", fontWeight = FontWeight.Bold, color = Color.White)
-        }
-
-        errorMessage?.let {
-            Text(
-                text = it,
-                color = Color.Red,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(top = 8.dp)
+            LoginForm(
+                onLogin = onLogin,
+                onForgotPassword = onForgotPassword,
+                onGoogleLogin = onGoogleLogin
             )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        GoogleLoginButton(onClick = onGoogleLogin)
     }
 }
 

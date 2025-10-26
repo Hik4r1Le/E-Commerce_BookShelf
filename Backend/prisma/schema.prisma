@@ -43,34 +43,53 @@ enum DiscountType {
 }
 
 model User {
-  id             String        @id @default(uuid()) @db.VarChar(255)
-  email          String?       @unique @db.VarChar(255)
-  user_name      String?       @db.VarChar(255)
-  password_hash  String?       @db.VarChar(255)
-  role           Role?         @default(user)
-  is_veryfied    Boolean?
-  created_at     DateTime?     @db.Timestamp(6)
-  updated_at     DateTime?     @db.Timestamp(6)
-  deleted_at     DateTime?     @db.Timestamp(6)
+  id                String    @id @default(uuid()) @db.VarChar(255)
+  email             String?   @unique @db.VarChar(255)
+  username          String?   @db.VarChar(255)
+  password_hash     String?   @db.VarChar(255)
+  role              Role?     @default(user)
+  is_email_verified Boolean?  @default(false)
+  google_id         String?   @unique @db.VarChar(255)
+  avatar            String?   @db.VarChar(255)
+  created_at        DateTime  @default(now()) @db.Timestamp(6)
+  updated_at        DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at        DateTime? @db.Timestamp(6)
 
-  profile        UserProfile?   
+  refresh_tokens RefreshToken?
+  profile        UserProfile?
   addresses      Address[]
   stocks         Stock[]
-  carts          Cart[]
-  orders         Order[]
+  carts          Cart?
+  orders         Order?
 
   @@map("users")
 }
 
-model UserProfile {
+model RefreshToken {
   id         String   @id @default(uuid()) @db.VarChar(255)
-  user_id    String   @unique @db.VarChar(255)   
-  full_name  String?  @db.VarChar(255)
+  user_id    String   @unique @db.VarChar(255)
+  token_hash String   @db.VarChar(255)
+  is_revoked Boolean  @default(false)
+  expires_at DateTime @db.Timestamp(6)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  user User? @relation(fields: [user_id], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model UserProfile {
+  id         String    @id @default(uuid()) @db.VarChar(255)
+  user_id    String    @unique @db.VarChar(255)
+  full_name  String?   @db.VarChar(255)
   dob        DateTime? @db.Date
   gender     Gender?   @default(male)
   avatar_url String?   @db.VarChar(255)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
 
-  user       User     @relation(fields: [user_id], references: [id])
+  user User @relation(fields: [user_id], references: [id])
 
   @@map("user_profiles")
 }
@@ -85,104 +104,115 @@ model Address {
   district       String?       @db.VarChar(255)
   city           String?       @db.VarChar(255)
   is_default     Boolean?
+  created_at     DateTime      @default(now()) @db.Timestamp(6)
+  updated_at     DateTime      @updatedAt @db.Timestamp(6)
+  deleted_at     DateTime?     @db.Timestamp(6)
 
-  user           User?         @relation(fields: [user_id], references: [id])
-  orderDetails   OrderDetail[]
+  user         User?         @relation(fields: [user_id], references: [id])
+  orderDetails OrderDetail[]
 
   @@map("addresses")
 }
 
 model Stock {
   id             String       @id @default(uuid()) @db.VarChar(255)
-  book_id        String?      @db.VarChar(255)
+  product_id     String?      @unique @db.VarChar(255)
   user_id        String?      @db.VarChar(255)
   stock_quantity Int?
   stock_status   StockStatus? @default(in_stock)
-  created_at     DateTime?    @db.Timestamp(6)
-  updated_at     DateTime?    @db.Timestamp(6)
+  created_at     DateTime     @default(now()) @db.Timestamp(6)
+  updated_at     DateTime     @updatedAt @db.Timestamp(6)
   deleted_at     DateTime?    @db.Timestamp(6)
 
-  user           User?        @relation(fields: [user_id], references: [id])
-  cartDetails    CartDetail[]
-  orderDetails   OrderDetail[]
+  user         User?         @relation(fields: [user_id], references: [id])
+  cartDetails  CartDetail[]
+  orderDetails OrderDetail[]
 
   @@map("stocks")
 }
 
 model Cart {
-  id         String      @id @default(uuid()) @db.VarChar(255)
-  user_id    String?     @db.VarChar(255)
-  created_at DateTime?   @db.Timestamp(6)
-  updated_at DateTime?   @db.Timestamp(6)
-  deleted_at DateTime?   @db.Timestamp(6)
+  id         String    @id @default(uuid()) @db.VarChar(255)
+  user_id    String?   @unique @db.VarChar(255)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
 
-  user       User?       @relation(fields: [user_id], references: [id])
-  cartItems  CartDetail[] @relation("CartToCartDetails")
+  user      User?        @relation(fields: [user_id], references: [id])
+  cartItems CartDetail[] @relation("CartToCartDetails")
 
   @@map("carts")
 }
 
 model CartDetail {
-  id           String   @id @default(uuid()) @db.VarChar(255)
-  cart_id      String?  @db.VarChar(255)
-  stock_id     String?  @db.VarChar(255)
-  book_id      String?  @db.VarChar(255)
+  id           String    @id @default(uuid()) @db.VarChar(255)
+  cart_id      String?   @db.VarChar(255)
+  stock_id     String?   @db.VarChar(255)
   quantity     Int?
-  price_at_add Decimal? @db.Decimal(10, 2)
+  price_at_add Decimal?  @db.Decimal(10, 2)
+  product_name String?   @db.VarChar(255)
+  author_name  String?   @db.VarChar(255)
+  cover_image  String?   @db.VarChar(255)
+  category     String?   @db.VarChar(255)
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at   DateTime? @db.Timestamp(6)
 
-  cart         Cart?    @relation("CartToCartDetails", fields: [cart_id], references: [id])
-  stock        Stock?   @relation(fields: [stock_id], references: [id])
+  cart  Cart?  @relation("CartToCartDetails", fields: [cart_id], references: [id])
+  stock Stock? @relation(fields: [stock_id], references: [id])
 
   @@map("cart_details")
 }
 
 model Order {
-  id         String        @id @default(uuid()) @db.VarChar(255)
-  user_id    String?       @db.VarChar(255)
-  created_at DateTime?     @db.Timestamp(6)
-  updated_at DateTime?     @db.Timestamp(6)
-  deleted_at DateTime?     @db.Timestamp(6)
+  id         String    @id @default(uuid()) @db.VarChar(255)
+  user_id    String?   @unique @db.VarChar(255)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @updatedAt @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
 
-  user       User?         @relation(fields: [user_id], references: [id])
-  details    OrderDetail[]
+  user    User?         @relation(fields: [user_id], references: [id])
+  details OrderDetail[]
 
   @@map("orders")
 }
 
 model OrderDetail {
-  id           String   @id @default(uuid()) @db.VarChar(255)
-  order_id     String?  @db.VarChar(255)
-  book_id      String?  @db.VarChar(255)
-  address_id   String?  @db.VarChar(255)
-  coupon_id    String?  @db.VarChar(255)
-  stock_id     String?  @db.VarChar(255)
+  id           String       @id @default(uuid()) @db.VarChar(255)
+  order_id     String?      @db.VarChar(255)
+  address_id   String?      @db.VarChar(255)
+  coupon_id    String?      @db.VarChar(255)
+  stock_id     String?      @db.VarChar(255)
   quantity     Int?
-  shipping_fee Decimal? @db.Decimal(10, 2)
-  total_price  Decimal? @db.Decimal(10, 2)
+  shipping_fee Decimal?     @db.Decimal(10, 2)
+  total_price  Decimal?     @db.Decimal(10, 2)
   status       OrderStatus? @default(processing)
+  created_at   DateTime     @default(now()) @db.Timestamp(6)
+  updated_at   DateTime     @updatedAt @db.Timestamp(6)
+  deleted_at   DateTime?    @db.Timestamp(6)
 
-  order        Order?   @relation(fields: [order_id], references: [id])
-  address      Address? @relation(fields: [address_id], references: [id])
-  coupon       Coupon?  @relation(fields: [coupon_id], references: [id])
-  stock        Stock?   @relation(fields: [stock_id], references: [id])
+  order   Order?   @relation(fields: [order_id], references: [id])
+  address Address? @relation(fields: [address_id], references: [id])
+  coupon  Coupon?  @relation(fields: [coupon_id], references: [id])
+  stock   Stock?   @relation(fields: [stock_id], references: [id])
 
   @@map("order_details")
 }
 
 model Coupon {
-  id             String    @id @default(uuid()) @db.VarChar(255)
-  code           String?   @unique @db.VarChar(255)
+  id             String        @id @default(uuid()) @db.VarChar(255)
+  code           String?       @unique @db.VarChar(255)
   discount_type  DiscountType? @default(percentage)
-  discount_value Decimal?  @db.Decimal(10, 2)
+  discount_value Decimal?      @db.Decimal(10, 2)
   usage_limit    Int?
   used_count     Int?
-  start_date     DateTime? @db.DateTime(0)
-  end_date       DateTime? @db.DateTime(0)
-  created_at     DateTime? @db.Timestamp(6)
-  updated_at     DateTime? @db.Timestamp(6)
-  deleted_at     DateTime? @db.Timestamp(6)
+  start_date     DateTime?     @db.DateTime(0)
+  end_date       DateTime?     @db.DateTime(0)
+  created_at     DateTime      @default(now()) @db.Timestamp(6)
+  updated_at     DateTime      @updatedAt @db.Timestamp(6)
+  deleted_at     DateTime?     @db.Timestamp(6)
 
-  orderDetails   OrderDetail[]
+  orderDetails OrderDetail[]
 
   @@map("coupons")
 }

@@ -1,20 +1,18 @@
-import ProductModel from "../models/mongodb/product.model.js"
+import ProductService from "../services/product.service.js"
 
-class Product {
-    static async getProduct(req, res, next) {
-        const productCount = parseInt(req.query.limit) || 20
-
+class ProductController {
+    async getProductById(req, res, next) {
         try {
-            const products = await ProductModel.find().limit(productCount);
-            res.status(200).json(products);
-        } catch (error) {
-            next(error);
+            const products = await ProductService.getProductById(req.params);
+            res.status(200).json({ success: true, data: products });
+        } catch (err) {
+            next(err);
         }
     }
 
-    static async addProduct(req, res, next) {
+    async addProduct(req, res, next) {
 
     }
 }
 
-export default Product;
+export default new ProductController();

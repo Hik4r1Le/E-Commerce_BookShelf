@@ -2,6 +2,7 @@
 CREATE TABLE `users` (
     `id` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NULL,
+    `user_name` VARCHAR(255) NULL,
     `password_hash` VARCHAR(255) NULL,
     `role` ENUM('admin', 'user', 'seller') NULL DEFAULT 'user',
     `is_veryfied` BOOLEAN NULL,

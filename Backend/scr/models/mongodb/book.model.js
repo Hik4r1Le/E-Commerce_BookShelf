@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const bookSchema = new mongoose.Schema(
   {
-    book_id: { type: String, required: true, unique: true },
     isbn: { type: String },
     title: { type: String, required: true },
     subtitle: { type: String },
     authors: [{ type: String }],
     description: { type: String },
+    cover_image: { type: String },
     publisher: { type: String },
     publish_date: { type: Date },
     category_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],

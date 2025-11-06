@@ -27,7 +27,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.bookstore.R
 
-// ----------------- Colors -----------------
+// Colors
 private val TealGreen = Color(0xFF17A590)
 private val GrayText = Color(0xFF757575)
 private val GrayArrow = Color(0xFFBDBDBD)
@@ -38,7 +38,8 @@ data class BookOrder(
     val author: String,
     val price: Int,
     val quantity: Int,
-    val imageRes: Int
+    val imageRes: Int,
+    val status: String
 )
 
 data class OrderSection(
@@ -286,6 +287,7 @@ fun OrderItem(order: BookOrder) {
             Text(order.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(order.author, fontSize = 12.sp, color = Color.Gray)
             Text("Số lượng: ${order.quantity}", fontSize = 12.sp)
+            Text("Trạng thái: ${order.status}", fontSize = 12.sp, color = TealGreen)
         }
         Text(
             "${order.price}.000đ",
@@ -297,18 +299,6 @@ fun OrderItem(order: BookOrder) {
         )
     }
 }
-
-private val sampleOrders = listOf(
-    BookOrder("Muôn kiếp nhân sinh", "Nguyễn Phong", 99, 1, R.drawable.book6),
-    BookOrder("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", 69, 2, R.drawable.book7)
-)
-
-private val sampleSections = listOf(
-    OrderSection("Chờ xác nhận", sampleOrders, 257, "Đang xử lý"),
-    OrderSection("Chờ lấy hàng", sampleOrders, 257, "Liên hệ Shop"),
-    OrderSection("Chờ giao hàng", sampleOrders, 257, "Đã nhận hàng"),
-    OrderSection("Đã giao", sampleOrders, 257, "Mua lại")
-)
 
 // Fragment
 class OrdersFragment : Fragment() {
@@ -356,14 +346,13 @@ fun OrdersContent(
     ) {
         OrdersHeader(totalMessages, onBackClick, onMessageClick)
 
-        val tabTitles = tabs
         TabRow(
             selectedTabIndex = selectedTabIndex,
             modifier = Modifier.fillMaxWidth(),
             containerColor = Color.White,
             contentColor = Color.Black
         ) {
-            tabTitles.forEachIndexed { index, title ->
+            tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { onTabSelected(index) },
@@ -398,25 +387,61 @@ fun OrdersContent(
 @Preview(showBackground = true)
 @Composable
 fun PreviewSectionWaitingConfirmation() {
-    SectionOrderCardFloat(sampleSections[0])
+    SectionOrderCardFloat(
+        OrderSection(
+            "Chờ xác nhận",
+            listOf(
+                BookOrder("Muôn kiếp nhân sinh", "Nguyễn Phong", 99, 1, R.drawable.book6, "Chờ xác nhận"),
+                BookOrder("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", 69, 2, R.drawable.book7, "Chờ xác nhận")
+            ),
+            257, "Đang xử lý"
+        )
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewSectionWaitingPickup() {
-    SectionOrderCardFloat(sampleSections[1])
+    SectionOrderCardFloat(
+        OrderSection(
+            "Chờ lấy hàng",
+            listOf(
+                BookOrder("Đắc Nhân Tâm", "Dale Carnegie", 89, 1, R.drawable.book6, "Chờ lấy hàng"),
+                BookOrder("Sapiens", "Yuval Harari", 120, 1, R.drawable.book7, "Chờ lấy hàng")
+            ),
+            209, "Liên hệ Shop"
+        )
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewSectionWaitingDelivery() {
-    SectionOrderCardFloat(sampleSections[2])
+    SectionOrderCardFloat(
+        OrderSection(
+            "Chờ giao hàng",
+            listOf(
+                BookOrder("Nhà giả kim", "Paulo Coelho", 75, 1, R.drawable.book6, "Chờ giao hàng"),
+                BookOrder("Tuổi thơ dữ dội", "Phùng Quán", 65, 2, R.drawable.book7, "Chờ giao hàng")
+            ),
+            205, "Đã nhận hàng"
+        )
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewSectionDelivered() {
-    SectionOrderCardFloat(sampleSections[3])
+    SectionOrderCardFloat(
+        OrderSection(
+            "Đã giao",
+            listOf(
+                BookOrder("Đi tìm thời gian đã mất", "Marcel Proust", 110, 1, R.drawable.book6, "Đã giao"),
+                BookOrder("Bí mật tư duy triệu phú", "T. Harv Eker", 95, 1, R.drawable.book7, "Đã giao")
+            ),
+            205, "Mua lại"
+        )
+    )
 }
 
 @Preview(showBackground = true, heightDp = 520)
@@ -428,7 +453,40 @@ fun PreviewOrdersScreen() {
         tabs = listOf("Chờ xác nhận", "Chờ lấy hàng", "Chờ giao hàng", "Đã giao"),
         selectedTabIndex = selectedTabIndex,
         totalMessages = 8,
-        orderSections = sampleSections,
+        orderSections = listOf(
+            OrderSection(
+                "Chờ xác nhận",
+                listOf(
+                    BookOrder("Muôn kiếp nhân sinh", "Nguyễn Phong", 99, 1, R.drawable.book6, "Chờ xác nhận"),
+                    BookOrder("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", 69, 2, R.drawable.book7, "Chờ xác nhận")
+                ),
+                257, "Đang xử lý"
+            ),
+            OrderSection(
+                "Chờ lấy hàng",
+                listOf(
+                    BookOrder("Đắc Nhân Tâm", "Dale Carnegie", 89, 1, R.drawable.book6, "Chờ lấy hàng"),
+                    BookOrder("Sapiens", "Yuval Harari", 120, 1, R.drawable.book7, "Chờ lấy hàng")
+                ),
+                209, "Liên hệ Shop"
+            ),
+            OrderSection(
+                "Chờ giao hàng",
+                listOf(
+                    BookOrder("Nhà giả kim", "Paulo Coelho", 75, 1, R.drawable.book6, "Chờ giao hàng"),
+                    BookOrder("Tuổi thơ dữ dội", "Phùng Quán", 65, 2, R.drawable.book7, "Chờ giao hàng")
+                ),
+                205, "Đã nhận hàng"
+            ),
+            OrderSection(
+                "Đã giao",
+                listOf(
+                    BookOrder("Đi tìm thời gian đã mất", "Marcel Proust", 110, 1, R.drawable.book6, "Đã giao"),
+                    BookOrder("Bí mật tư duy triệu phú", "T. Harv Eker", 95, 1, R.drawable.book7, "Đã giao")
+                ),
+                205, "Mua lại"
+            )
+        ),
         onTabSelected = { selectedTabIndex = it },
         onBackClick = {},
         onMessageClick = {}

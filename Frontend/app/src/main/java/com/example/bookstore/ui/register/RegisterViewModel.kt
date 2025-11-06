@@ -41,12 +41,12 @@ class RegisterViewModel : ViewModel() {
             return
         }
 
-        // Giả lập API
+        // Giả lập API call
         viewModelScope.launch {
             _uiState.value = RegisterUiState(isLoading = true)
-            delay(2000)
+            delay(2000) // simulate network delay
             _uiState.value = RegisterUiState(isLoading = false, errorMessage = null)
-            onSuccess()
+            onSuccess() // callback navigation
         }
     }
 

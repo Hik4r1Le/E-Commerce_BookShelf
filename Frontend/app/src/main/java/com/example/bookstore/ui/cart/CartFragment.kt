@@ -33,8 +33,8 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.bookstore.ui.theme.BookstoreTheme
 import com.example.bookstore.R
+import com.example.bookstore.ui.theme.BookstoreTheme
 
 class CartFragment : Fragment() {
 
@@ -55,7 +55,7 @@ class CartFragment : Fragment() {
                         totalPrice = totalPrice,
                         totalItems = totalItems,
                         onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() },
-                        onCheckoutClick = { /* navigate to checkout */ },
+                        onCheckoutClick = { /* TODO: Checkout navigation */ },
                         onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
                         onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
                         onDelete = { id -> viewModel.removeItem(id) }
@@ -66,11 +66,10 @@ class CartFragment : Fragment() {
     }
 }
 
-// Composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
-    cartItems: List<CartItem>,
+    cartItems: List<CartViewModel.CartItem>,
     totalPrice: Int,
     totalItems: Int,
     onBackClick: () -> Unit = {},
@@ -79,51 +78,30 @@ fun CartScreen(
     onQuantityChange: (Int, Int) -> Unit = { _, _ -> },
     onDelete: (Int) -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFFFF8F3))
-    ) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF8F3))) {
+
         // Header
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .background(Color(0xFFA7AAE1))
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().height(60.dp).background(Color(0xFFA7AAE1)).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.DarkGray)
-            }
+            IconButton(onClick = onBackClick) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.DarkGray) }
             Text("Giỏ hàng", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Box(contentAlignment = Alignment.TopEnd) {
-                Icon(
-                    Icons.Filled.ShoppingCart,
-                    contentDescription = "Cart",
-                    tint = Color.DarkGray,
-                    modifier = Modifier.size(32.dp)
-                )
+                Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = Color.DarkGray, modifier = Modifier.size(32.dp))
                 if (totalItems > 0) {
                     Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .background(Color.Red, shape = CircleShape)
-                            .align(Alignment.TopEnd),
+                        modifier = Modifier.size(18.dp).background(Color.Red, shape = CircleShape).align(Alignment.TopEnd),
                         contentAlignment = Alignment.Center
-                    ) {
-                        Text("$totalItems", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    ) { Text("$totalItems", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
                 }
             }
         }
 
-        // Danh sách sản phẩm
+        // Cart items
         LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(cartItems, key = { it.id }) { item ->
@@ -136,18 +114,9 @@ fun CartScreen(
             }
         }
 
-        // Footer: Tổng cộng + Thanh toán
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFFFF8F3))
-                .padding(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        // Footer
+        Column(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF8F3)).padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Tổng cộng:", fontSize = 20.sp, fontWeight = FontWeight.Medium)
                 Text("${"%,d".format(totalPrice)} đ", fontSize = 20.sp, color = Color.Red)
             }
@@ -155,37 +124,26 @@ fun CartScreen(
             Button(
                 onClick = onCheckoutClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2AEBB)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Thanh toán", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            }
+            ) { Text("Thanh toán", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White) }
         }
     }
 }
 
 @Composable
 fun CartItemCard(
-    item: CartItem,
+    item: CartViewModel.CartItem,
     onCheckedChange: (Boolean) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(4.dp, Color(0xFFF2AEBB), RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxWidth().border(4.dp, Color(0xFFF2AEBB), RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4)),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = item.checked,
                 onCheckedChange = onCheckedChange,
@@ -196,21 +154,13 @@ fun CartItemCard(
                     checkmarkColor = Color.White
                 )
             )
-
             Image(
                 painter = painterResource(id = item.imageRes),
                 contentDescription = null,
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp))
             )
-
             Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text(item.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2)
                     Text(item.author, fontSize = 14.sp, color = Color.Gray, maxLines = 2)
@@ -218,49 +168,26 @@ fun CartItemCard(
                     Text("${"%,d".format(item.price)} đ", fontSize = 16.sp, color = Color.Red)
                 }
 
-                Row(
-                    modifier = Modifier
-                        .width(120.dp)
-                        .height(36.dp)
-                        .background(Color(0xFFD9D9D9), RoundedCornerShape(8.dp))
-                ) {
+                Row(modifier = Modifier.width(120.dp).height(36.dp).background(Color(0xFFD9D9D9), RoundedCornerShape(8.dp))) {
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { if (item.quantity > 1) onQuantityChange(item.quantity - 1) }
-                            .wrapContentSize(Alignment.Center)
+                        modifier = Modifier.weight(1f).fillMaxHeight().clickable { if (item.quantity > 1) onQuantityChange(item.quantity - 1) }.wrapContentSize(Alignment.Center)
                     ) { Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
-
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().wrapContentSize(Alignment.Center)) { Text("${item.quantity}", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .wrapContentSize(Alignment.Center)
-                    ) { Text("${item.quantity}", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable { onQuantityChange(item.quantity + 1) }
-                            .wrapContentSize(Alignment.Center)
+                        modifier = Modifier.weight(1f).fillMaxHeight().clickable { onQuantityChange(item.quantity + 1) }.wrapContentSize(Alignment.Center)
                     ) { Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                 }
             }
-
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black)
-            }
+            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black) }
         }
     }
 }
 
 // Previews
 fun previewSampleCartItems() = listOf(
-    CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
-    CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
-    CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
+    CartViewModel.CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
+    CartViewModel.CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
+    CartViewModel.CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
 )
 
 @Preview(showBackground = true)

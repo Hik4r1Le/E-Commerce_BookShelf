@@ -1,13 +1,17 @@
 package com.example.bookstore.ui.cart
 
 import android.content.res.Configuration
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,76 +19,66 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bookstore.R
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.bookstore.ui.theme.BookstoreTheme
+import com.example.bookstore.R
 
-// Dữ liệu mẫu
-data class CartItem(
-    val id: Int,
-    val name: String,
-    val author: String,
-    val price: Int,
-    val imageRes: Int
-)
+class CartFragment : Fragment() {
 
-fun sampleCartItems() = listOf(
-    CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95000, R.drawable.book1),
-    CartItem(2, "Memoirs", "Kanika Sharma", 88000, R.drawable.book2),
-    CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120000, R.drawable.book3),
-    CartItem(4, "Kính Vạn Hoa", "Nguyễn Nhật Ánh", 86000, R.drawable.book4)
-)
+    private val viewModel: CartViewModel by viewModels()
 
-// Cart Screen 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CartScreen(
-    onBackClick: () -> Unit = {},
-    onCheckoutClick: () -> Unit = {}
-) {
-    val cartItems = remember { sampleCartItems().toMutableStateList() }
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View = ComposeView(requireContext()).apply {
+        setContent {
+            BookstoreTheme {
+                val items by viewModel.cartItems.collectAsStateWithLifecycle()
+                val totalPrice = viewModel.getTotalPrice()
+                val totalItems = viewModel.getTotalItems()
 
-    val quantities = remember(cartItems) {
-        mutableStateMapOf<Int, Int>().apply {
-            cartItems.forEach {
-                val defaultQty = when (it.name) {
-                    "Memoirs" -> 2
-                    "Kính Vạn Hoa" -> 3
-                    else -> 1
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    CartScreen(
+                        cartItems = items,
+                        totalPrice = totalPrice,
+                        totalItems = totalItems,
+                        onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() },
+                        onCheckoutClick = { /* navigate to checkout */ },
+                        onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
+                        onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
+                        onDelete = { id -> viewModel.removeItem(id) }
+                    )
                 }
-                put(it.id, defaultQty)
             }
         }
     }
+}
 
-    val checkedStates = remember(cartItems) {
-        mutableStateMapOf<Int, Boolean>().apply { cartItems.forEach { put(it.id, true) } }
-    }
-
-    val totalPrice by remember {
-        derivedStateOf {
-            cartItems.filter { checkedStates[it.id] == true }
-                .sumOf { it.price * (quantities[it.id] ?: 1) }
-        }
-    }
-
-    val totalItems by remember {
-        derivedStateOf {
-            cartItems.filter { checkedStates[it.id] == true }
-                .sumOf { quantities[it.id] ?: 1 }
-        }
-    }
-
+// Composable
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CartScreen(
+    cartItems: List<CartItem>,
+    totalPrice: Int,
+    totalItems: Int,
+    onBackClick: () -> Unit = {},
+    onCheckoutClick: () -> Unit = {},
+    onCheckedChange: (Int, Boolean) -> Unit = { _, _ -> },
+    onQuantityChange: (Int, Int) -> Unit = { _, _ -> },
+    onDelete: (Int) -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -132,24 +126,17 @@ fun CartScreen(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            itemsIndexed(cartItems) { _, item ->
-                val quantity = quantities[item.id] ?: 1
+            items(cartItems, key = { it.id }) { item ->
                 CartItemCard(
                     item = item,
-                    quantity = quantity,
-                    checked = checkedStates[item.id] == true,
-                    onCheckedChange = { checkedStates[item.id] = it },
-                    onQuantityChange = { newQty -> quantities[item.id] = newQty },
-                    onDelete = {
-                        cartItems.remove(item)
-                        quantities.remove(item.id)
-                        checkedStates.remove(item.id)
-                    }
+                    onCheckedChange = { checked -> onCheckedChange(item.id, checked) },
+                    onQuantityChange = { qty -> onQuantityChange(item.id, qty) },
+                    onDelete = { onDelete(item.id) }
                 )
             }
         }
 
-        // Nút thanh toán
+        // Footer: Tổng cộng + Thanh toán
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,12 +166,9 @@ fun CartScreen(
     }
 }
 
-// Card item
 @Composable
 fun CartItemCard(
     item: CartItem,
-    quantity: Int,
-    checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDelete: () -> Unit
@@ -203,7 +187,7 @@ fun CartItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
-                checked = checked,
+                checked = item.checked,
                 onCheckedChange = onCheckedChange,
                 modifier = Modifier.padding(end = 8.dp),
                 colors = CheckboxDefaults.colors(
@@ -244,54 +228,44 @@ fun CartItemCard(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clickable { if (quantity > 1) onQuantityChange(quantity - 1) }
+                            .clickable { if (item.quantity > 1) onQuantityChange(item.quantity - 1) }
                             .wrapContentSize(Alignment.Center)
                     ) { Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
 
                     Box(
                         modifier = Modifier
-                            .width(1.dp)
-                            .fillMaxHeight()
-                            .background(Color.Gray)
-                    )
-
-                    Box(
-                        modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .wrapContentSize(Alignment.Center)
-                    ) { Text("$quantity", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
-
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .fillMaxHeight()
-                            .background(Color.Gray)
-                    )
+                    ) { Text("${item.quantity}", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clickable { onQuantityChange(quantity + 1) }
+                            .clickable { onQuantityChange(item.quantity + 1) }
                             .wrapContentSize(Alignment.Center)
                     ) { Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                 }
             }
 
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.align(Alignment.Top)
-            ) { Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black) }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black)
+            }
         }
     }
 }
 
 // Previews
+fun previewSampleCartItems() = listOf(
+    CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
+    CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
+    CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
+)
+
 @Preview(showBackground = true)
 @Composable
 fun CartPreviewShort() {
-    val items = sampleCartItems().take(3)
     BookstoreTheme {
         Card(
             modifier = Modifier
@@ -308,7 +282,7 @@ fun CartPreviewShort() {
                     .padding(12.dp)
                     .fillMaxSize()
             ) {
-                items.forEach { item ->
+                previewSampleCartItems().forEach { item ->
                     Image(
                         painter = painterResource(id = item.imageRes),
                         contentDescription = null,
@@ -325,19 +299,8 @@ fun CartPreviewShort() {
 @Preview(showBackground = true)
 @Composable
 fun CartPreviewMedium() {
-    val items = sampleCartItems().take(3)
-    val quantities = remember {
-        mutableStateListOf<Int>().apply {
-            items.forEach {
-                val defaultQty = when (it.name) {
-                    "Memoirs" -> 2
-                    "Kính Vạn Hoa" -> 3
-                    else -> 1
-                }
-                add(defaultQty)
-            }
-        }
-    }
+    val items = previewSampleCartItems()
+    val quantities = remember { mutableStateListOf(1, 2, 1) }
 
     BookstoreTheme {
         LazyColumn(
@@ -346,13 +309,12 @@ fun CartPreviewMedium() {
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            itemsIndexed(items) { index, item ->
+            items(items) { item ->
+                val idx = items.indexOf(item)
                 CartItemCard(
-                    item = item,
-                    quantity = quantities[index],
-                    checked = true,
+                    item = item.copy(quantity = quantities[idx]),
                     onCheckedChange = {},
-                    onQuantityChange = { newQty -> quantities[index] = newQty },
+                    onQuantityChange = { newQty -> quantities[idx] = newQty },
                     onDelete = {}
                 )
             }
@@ -364,6 +326,15 @@ fun CartPreviewMedium() {
 @Composable
 fun CartPreviewFull() {
     BookstoreTheme {
-        CartScreen()
+        CartScreen(
+            cartItems = previewSampleCartItems(),
+            totalPrice = previewSampleCartItems().sumOf { it.price * it.quantity },
+            totalItems = previewSampleCartItems().sumOf { it.quantity },
+            onBackClick = {},
+            onCheckoutClick = {},
+            onCheckedChange = { _, _ -> },
+            onQuantityChange = { _, _ -> },
+            onDelete = {}
+        )
     }
 }

@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import AuthService from "../services/auth.service.js";
+import { loginOrRegisterWithGoogle } from "../services/auth.service.js";
 
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -11,7 +11,7 @@ passport.use(new GoogleStrategy({
     // Passport tự gửi request tới Google để đổi CODE sang TOKEN và PROFILE trong nội bộ của passport
     // Sau đó trả về accessToken, refreshToken, profile ở đây
     try {
-        const token = await AuthService.loginOrRegisterWithGoogle(profile);
+        const token = await loginOrRegisterWithGoogle(profile);
         return done(null, { token });
     } catch (err) {
         return done(err, null);

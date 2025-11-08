@@ -1,4 +1,4 @@
-package com.example.bookstore.data
+package com.example.bookstore.model
 
 data class CartItem(
     val id: Int,

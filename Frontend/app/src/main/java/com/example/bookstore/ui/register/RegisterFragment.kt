@@ -12,7 +12,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,18 +33,16 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.bookstore.R
-import com.example.bookstore.data.RegisterCredentials
-import com.example.bookstore.data.RegisterUiState
+import com.example.bookstore.model.RegisterCredentials
+import com.example.bookstore.model.RegisterUiState
 import com.example.bookstore.ui.theme.BookstoreTheme
 
-// Fragment hiển thị Register screen
 class RegisterFragment : Fragment(R.layout.fragment_register) {
 
     private val viewModel: RegisterViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
@@ -65,7 +62,7 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
     }
 }
 
-// Composables
+// Composable RegisterScreen
 @Composable
 fun RegisterScreen(
     uiState: RegisterUiState,
@@ -100,6 +97,7 @@ fun RegisterScreen(
     }
 }
 
+// Header
 @Composable
 fun RegisterHeader(onLoginClick: () -> Unit = {}) {
     Box(
@@ -155,6 +153,7 @@ fun RegisterHeader(onLoginClick: () -> Unit = {}) {
     }
 }
 
+// Form
 @Composable
 fun RegisterForm(
     credentials: RegisterCredentials,

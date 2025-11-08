@@ -34,7 +34,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.bookstore.R
-import com.example.bookstore.data.CartItem
+import com.example.bookstore.model.CartItem
 import com.example.bookstore.ui.theme.BookstoreTheme
 
 class CartFragment : Fragment() {

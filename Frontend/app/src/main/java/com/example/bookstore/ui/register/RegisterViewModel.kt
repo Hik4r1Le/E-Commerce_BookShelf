@@ -2,8 +2,8 @@ package com.example.bookstore.ui.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookstore.data.RegisterCredentials
-import com.example.bookstore.data.RegisterUiState
+import com.example.bookstore.model.RegisterCredentials
+import com.example.bookstore.model.RegisterUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -24,7 +24,7 @@ class RegisterViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // Dummy validation
+            // Kiểm tra dữ liệu nhập
             if (_credentials.username.isBlank() ||
                 _credentials.fullname.isBlank() ||
                 _credentials.email.isBlank() ||

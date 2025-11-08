@@ -26,9 +26,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.bookstore.R
-import com.example.bookstore.data.Order
-import com.example.bookstore.data.OrderSection
-import com.example.bookstore.data.OrderStatus
+import com.example.bookstore.model.OrderData
+import com.example.bookstore.model.OrderDataSection
+import com.example.bookstore.model.OrderStatus
 
 // Colors
 private val TealGreen = Color(0xFF17A590)
@@ -83,7 +83,7 @@ fun OrdersHeader(totalMessages: Int, onBackClick: () -> Unit, onMessageClick: ()
 
 // OrderItem
 @Composable
-fun OrderItem(order: Order) {
+fun OrderItem(order: OrderData) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -120,7 +120,7 @@ fun OrderItem(order: Order) {
 
 // SectionOrderCardFloat
 @Composable
-fun SectionOrderCardFloat(section: OrderSection) {
+fun SectionOrderCardFloat(section: OrderDataSection) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -199,7 +199,7 @@ fun OrdersContent(
     tabs: List<String>,
     selectedTabIndex: Int,
     totalMessages: Int,
-    orderSections: List<OrderSection>,
+    orderSections: List<OrderDataSection>,
     onTabSelected: (Int) -> Unit,
     onBackClick: () -> Unit,
     onMessageClick: () -> Unit
@@ -225,38 +225,90 @@ fun OrdersContent(
 // Fragment
 class OrdersFragment : Fragment() {
     private val viewModel: OrdersViewModel by viewModels()
-    override fun onCreateView(inflater: android.view.LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?) = ComposeView(requireContext()).apply {
-        setContent {
-            val selectedTabIndex by viewModel.selectedTabIndex.collectAsStateWithLifecycle()
-            val totalMessages by viewModel.totalMessages.collectAsStateWithLifecycle()
-            val orderSections by viewModel.orderSections.collectAsStateWithLifecycle()
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?) =
+        ComposeView(requireContext()).apply {
+            setContent {
+                val selectedTabIndex by viewModel.selectedTabIndex.collectAsStateWithLifecycle()
+                val totalMessages by viewModel.totalMessages.collectAsStateWithLifecycle()
+                val orderSections by viewModel.orderSections.collectAsStateWithLifecycle()
 
-            OrdersContent(
-                tabs = viewModel.tabs,
-                selectedTabIndex = selectedTabIndex,
-                totalMessages = totalMessages,
-                orderSections = orderSections,
-                onTabSelected = { viewModel.onTabSelected(it) },
-                onBackClick = { requireActivity().onBackPressed() },
-                onMessageClick = { viewModel.clearMessages() }
-            )
+                OrdersContent(
+                    tabs = viewModel.tabs,
+                    selectedTabIndex = selectedTabIndex,
+                    totalMessages = totalMessages,
+                    orderSections = orderSections,
+                    onTabSelected = { viewModel.onTabSelected(it) },
+                    onBackClick = { requireActivity().onBackPressed() },
+                    onMessageClick = { viewModel.clearMessages() }
+                )
+            }
         }
-    }
 }
 
 // Previews
 @Preview(showBackground = true)
 @Composable
-fun PreviewSectionWaitingConfirmation() { SectionOrderCardFloat(OrderSection(OrderStatus.PENDING, listOf(Order(1,"Muôn kiếp nhân sinh","Nguyễn Phong",99,1,R.drawable.book6,OrderStatus.PENDING,"Đang xử lý"),Order(2,"Cho tôi xin một vé đi tuổi thơ","Nguyễn Nhật Ánh",69,2,R.drawable.book7,OrderStatus.PENDING,"Đang xử lý")),257,"Đang xử lý")) }
+fun PreviewSectionWaitingConfirmation() {
+    SectionOrderCardFloat(
+        OrderDataSection(
+            OrderStatus.PENDING,
+            listOf(
+                OrderData(1,"Muôn kiếp nhân sinh","Nguyễn Phong",99,1,R.drawable.book6,OrderStatus.PENDING,"Đang xử lý"),
+                OrderData(2,"Cho tôi xin một vé đi tuổi thơ","Nguyễn Nhật Ánh",69,2,R.drawable.book7,OrderStatus.PENDING,"Đang xử lý")
+            ),
+            totalPrice = 257,
+            actionText = "Đang xử lý"
+        )
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
-fun PreviewSectionWaitingPickup() { SectionOrderCardFloat(OrderSection(OrderStatus.WAIT_PICKUP, listOf(Order(3,"Đắc Nhân Tâm","Dale Carnegie",89,1,R.drawable.book6,OrderStatus.WAIT_PICKUP,"Liên hệ Shop"),Order(4,"Sapiens","Yuval Harari",120,1,R.drawable.book7,OrderStatus.WAIT_PICKUP,"Liên hệ Shop")),257,"Liên hệ Shop")) }
+fun PreviewSectionWaitingPickup() {
+    SectionOrderCardFloat(
+        OrderDataSection(
+            OrderStatus.WAIT_PICKUP,
+            listOf(
+                OrderData(3,"Đắc Nhân Tâm","Dale Carnegie",89,1,R.drawable.book6,OrderStatus.WAIT_PICKUP,"Liên hệ Shop"),
+                OrderData(4,"Sapiens","Yuval Harari",120,1,R.drawable.book7,OrderStatus.WAIT_PICKUP,"Liên hệ Shop")
+            ),
+            totalPrice = 257,
+            actionText = "Liên hệ Shop"
+        )
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
-fun PreviewSectionWaitingDelivery() { SectionOrderCardFloat(OrderSection(OrderStatus.WAIT_DELIVERY, listOf(Order(5,"Nhà giả kim","Paulo Coelho",75,1,R.drawable.book6,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng"),Order(6,"Tuổi thơ dữ dội","Phùng Quán",65,2,R.drawable.book7,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng")),257,"Đã nhận hàng")) }
+fun PreviewSectionWaitingDelivery() {
+    SectionOrderCardFloat(
+        OrderDataSection(
+            OrderStatus.WAIT_DELIVERY,
+            listOf(
+                OrderData(5,"Nhà giả kim","Paulo Coelho",75,1,R.drawable.book6,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng"),
+                OrderData(6,"Tuổi thơ dữ dội","Phùng Quán",65,2,R.drawable.book7,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng")
+            ),
+            totalPrice = 257,
+            actionText = "Đã nhận hàng"
+        )
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
-fun PreviewSectionDelivered() { SectionOrderCardFloat(OrderSection(OrderStatus.DELIVERED, listOf(Order(7,"Đi tìm thời gian đã mất","Marcel Proust",110,1,R.drawable.book6,OrderStatus.DELIVERED,"Mua lại"),Order(8,"Bí mật tư duy triệu phú","T. Harv Eker",95,1,R.drawable.book7,OrderStatus.DELIVERED,"Mua lại")),257,"Mua lại")) }
+fun PreviewSectionDelivered() {
+    SectionOrderCardFloat(
+        OrderDataSection(
+            OrderStatus.DELIVERED,
+            listOf(
+                OrderData(7,"Đi tìm thời gian đã mất","Marcel Proust",110,1,R.drawable.book6,OrderStatus.DELIVERED,"Mua lại"),
+                OrderData(8,"Bí mật tư duy triệu phú","T. Harv Eker",95,1,R.drawable.book7,OrderStatus.DELIVERED,"Mua lại")
+            ),
+            totalPrice = 257,
+            actionText = "Mua lại"
+        )
+    )
+}
 
 @Preview(showBackground = true, heightDp = 520)
 @Composable
@@ -267,10 +319,38 @@ fun PreviewOrdersScreen() {
         selectedTabIndex = selectedTabIndex,
         totalMessages = 8,
         orderSections = listOf(
-            OrderSection(OrderStatus.PENDING, listOf(Order(1,"Muôn kiếp nhân sinh","Nguyễn Phong",99,1,R.drawable.book6,OrderStatus.PENDING,"Đang xử lý"),Order(2,"Cho tôi xin một vé đi tuổi thơ","Nguyễn Nhật Ánh",69,2,R.drawable.book7,OrderStatus.PENDING,"Đang xử lý")),257,"Đang xử lý"),
-            OrderSection(OrderStatus.WAIT_PICKUP, listOf(Order(3,"Đắc Nhân Tâm","Dale Carnegie",89,1,R.drawable.book6,OrderStatus.WAIT_PICKUP,"Liên hệ Shop"),Order(4,"Sapiens","Yuval Harari",120,1,R.drawable.book7,OrderStatus.WAIT_PICKUP,"Liên hệ Shop")),257,"Liên hệ Shop"),
-            OrderSection(OrderStatus.WAIT_DELIVERY, listOf(Order(5,"Nhà giả kim","Paulo Coelho",75,1,R.drawable.book6,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng"),Order(6,"Tuổi thơ dữ dội","Phùng Quán",65,2,R.drawable.book7,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng")),257,"Đã nhận hàng"),
-            OrderSection(OrderStatus.DELIVERED, listOf(Order(7,"Đi tìm thời gian đã mất","Marcel Proust",110,1,R.drawable.book6,OrderStatus.DELIVERED,"Mua lại"),Order(8,"Bí mật tư duy triệu phú","T. Harv Eker",95,1,R.drawable.book7,OrderStatus.DELIVERED,"Mua lại")),257,"Mua lại")
+            OrderDataSection(OrderStatus.PENDING,
+                listOf(
+                    OrderData(1,"Muôn kiếp nhân sinh","Nguyễn Phong",99,1,R.drawable.book6,OrderStatus.PENDING,"Đang xử lý"),
+                    OrderData(2,"Cho tôi xin một vé đi tuổi thơ","Nguyễn Nhật Ánh",69,2,R.drawable.book7,OrderStatus.PENDING,"Đang xử lý")
+                ),
+                totalPrice = 257,
+                actionText = "Đang xử lý"
+            ),
+            OrderDataSection(OrderStatus.WAIT_PICKUP,
+                listOf(
+                    OrderData(3,"Đắc Nhân Tâm","Dale Carnegie",89,1,R.drawable.book6,OrderStatus.WAIT_PICKUP,"Liên hệ Shop"),
+                    OrderData(4,"Sapiens","Yuval Harari",120,1,R.drawable.book7,OrderStatus.WAIT_PICKUP,"Liên hệ Shop")
+                ),
+                totalPrice = 257,
+                actionText = "Liên hệ Shop"
+            ),
+            OrderDataSection(OrderStatus.WAIT_DELIVERY,
+                listOf(
+                    OrderData(5,"Nhà giả kim","Paulo Coelho",75,1,R.drawable.book6,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng"),
+                    OrderData(6,"Tuổi thơ dữ dội","Phùng Quán",65,2,R.drawable.book7,OrderStatus.WAIT_DELIVERY,"Đã nhận hàng")
+                ),
+                totalPrice = 257,
+                actionText = "Đã nhận hàng"
+            ),
+            OrderDataSection(OrderStatus.DELIVERED,
+                listOf(
+                    OrderData(7,"Đi tìm thời gian đã mất","Marcel Proust",110,1,R.drawable.book6,OrderStatus.DELIVERED,"Mua lại"),
+                    OrderData(8,"Bí mật tư duy triệu phú","T. Harv Eker",95,1,R.drawable.book7,OrderStatus.DELIVERED,"Mua lại")
+                ),
+                totalPrice = 257,
+                actionText = "Mua lại"
+            )
         ),
         onTabSelected = { selectedTabIndex = it },
         onBackClick = {},

@@ -2,10 +2,10 @@ package com.example.bookstore.ui.orders
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bookstore.model.OrderData
+import com.example.bookstore.model.OrderDataSection
+import com.example.bookstore.model.OrderStatus
 import com.example.bookstore.R
-import com.example.bookstore.data.Order
-import com.example.bookstore.data.OrderSection
-import com.example.bookstore.data.OrderStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,51 +20,49 @@ class OrdersViewModel : ViewModel() {
     private val _totalMessages = MutableStateFlow(8)
     val totalMessages: StateFlow<Int> = _totalMessages
 
-    private val _orderSections = MutableStateFlow<List<OrderSection>>(emptyList())
-    val orderSections: StateFlow<List<OrderSection>> = _orderSections
+    private val _orderSections = MutableStateFlow<List<OrderDataSection>>(emptyList())
+    val orderSections: StateFlow<List<OrderDataSection>> = _orderSections
 
-    init {
-        loadOrders()
-    }
+    init { loadOrders() }
 
     private fun loadOrders() {
         viewModelScope.launch {
             val sections = listOf(
-                OrderSection(
+                OrderDataSection(
                     OrderStatus.PENDING,
                     listOf(
-                        Order(1, "Muôn kiếp nhân sinh", "Nguyễn Phong", 99, 1, R.drawable.book6, OrderStatus.PENDING, "Đang xử lý"),
-                        Order(2, "Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", 69, 2, R.drawable.book7, OrderStatus.PENDING, "Đang xử lý")
+                        OrderData(1, "Muôn kiếp nhân sinh", "Nguyễn Phong", 99, 1, R.drawable.book6, OrderStatus.PENDING, "Đang xử lý"),
+                        OrderData(2, "Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", 69, 2, R.drawable.book7, OrderStatus.PENDING, "Đang xử lý")
                     ),
-                    99*1 + 69*2,
-                    "Đang xử lý"
+                    totalPrice = 99*1 + 69*2,
+                    actionText = "Đang xử lý"
                 ),
-                OrderSection(
+                OrderDataSection(
                     OrderStatus.WAIT_PICKUP,
                     listOf(
-                        Order(3, "Đắc Nhân Tâm", "Dale Carnegie", 89, 1, R.drawable.book6, OrderStatus.WAIT_PICKUP, "Liên hệ Shop"),
-                        Order(4, "Sapiens", "Yuval Harari", 120, 1, R.drawable.book7, OrderStatus.WAIT_PICKUP, "Liên hệ Shop")
+                        OrderData(3, "Đắc Nhân Tâm", "Dale Carnegie", 89, 1, R.drawable.book6, OrderStatus.WAIT_PICKUP, "Liên hệ Shop"),
+                        OrderData(4, "Sapiens", "Yuval Harari", 120, 1, R.drawable.book7, OrderStatus.WAIT_PICKUP, "Liên hệ Shop")
                     ),
-                    89*1 + 120*1,
-                    "Liên hệ Shop"
+                    totalPrice = 89+120,
+                    actionText = "Liên hệ Shop"
                 ),
-                OrderSection(
+                OrderDataSection(
                     OrderStatus.WAIT_DELIVERY,
                     listOf(
-                        Order(5, "Nhà giả kim", "Paulo Coelho", 75, 1, R.drawable.book6, OrderStatus.WAIT_DELIVERY, "Đã nhận hàng"),
-                        Order(6, "Tuổi thơ dữ dội", "Phùng Quán", 65, 2, R.drawable.book7, OrderStatus.WAIT_DELIVERY, "Đã nhận hàng")
+                        OrderData(5, "Nhà giả kim", "Paulo Coelho", 75, 1, R.drawable.book6, OrderStatus.WAIT_DELIVERY, "Đã nhận hàng"),
+                        OrderData(6, "Tuổi thơ dữ dội", "Phùng Quán", 65, 2, R.drawable.book7, OrderStatus.WAIT_DELIVERY, "Đã nhận hàng")
                     ),
-                    75*1 + 65*2,
-                    "Đã nhận hàng"
+                    totalPrice = 75 + 65*2,
+                    actionText = "Đã nhận hàng"
                 ),
-                OrderSection(
+                OrderDataSection(
                     OrderStatus.DELIVERED,
                     listOf(
-                        Order(7, "Đi tìm thời gian đã mất", "Marcel Proust", 110, 1, R.drawable.book6, OrderStatus.DELIVERED, "Mua lại"),
-                        Order(8, "Bí mật tư duy triệu phú", "T. Harv Eker", 95, 1, R.drawable.book7, OrderStatus.DELIVERED, "Mua lại")
+                        OrderData(7, "Đi tìm thời gian đã mất", "Marcel Proust", 110, 1, R.drawable.book6, OrderStatus.DELIVERED, "Mua lại"),
+                        OrderData(8, "Bí mật tư duy triệu phú", "T. Harv Eker", 95, 1, R.drawable.book7, OrderStatus.DELIVERED, "Mua lại")
                     ),
-                    110*1 + 95*1,
-                    "Mua lại"
+                    totalPrice = 110 + 95,
+                    actionText = "Mua lại"
                 )
             )
             _orderSections.value = sections
@@ -72,6 +70,5 @@ class OrdersViewModel : ViewModel() {
     }
 
     fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
-
     fun clearMessages() { _totalMessages.value = 0 }
 }

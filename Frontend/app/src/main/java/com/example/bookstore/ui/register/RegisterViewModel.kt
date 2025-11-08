@@ -2,62 +2,47 @@ package com.example.bookstore.ui.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.example.bookstore.data.RegisterCredentials
+import com.example.bookstore.data.RegisterUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Model dữ liệu
-data class RegisterCredentials(
-    val username: String = "",
-    val fullname: String = "",
-    val email: String = "",
-    val password: String = "",
-    val confirmPassword: String = ""
-)
-
-data class RegisterUiState(
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null
-)
-
-// ViewModel
 class RegisterViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState
 
-    private var currentCredentials = RegisterCredentials()
+    private var _credentials = RegisterCredentials()
 
     fun updateCredentials(credentials: RegisterCredentials) {
-        currentCredentials = credentials
+        _credentials = credentials
     }
 
     fun register(onSuccess: () -> Unit) {
-        // Validate input
-        val error = validate(currentCredentials)
-        if (error != null) {
-            _uiState.value = RegisterUiState(isLoading = false, errorMessage = error)
-            return
-        }
-
-        // Giả lập API call
         viewModelScope.launch {
-            _uiState.value = RegisterUiState(isLoading = true)
-            delay(2000) // simulate network delay
-            _uiState.value = RegisterUiState(isLoading = false, errorMessage = null)
-            onSuccess() // callback navigation
-        }
-    }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-    private fun validate(credentials: RegisterCredentials): String? {
-        if (credentials.username.isBlank()) return "Vui lòng nhập tên tài khoản"
-        if (credentials.fullname.isBlank()) return "Vui lòng nhập họ và tên"
-        if (credentials.email.isBlank()) return "Vui lòng nhập email"
-        if (!credentials.email.contains("@")) return "Email không hợp lệ"
-        if (credentials.password.isBlank()) return "Vui lòng nhập mật khẩu"
-        if (credentials.password.length < 6) return "Mật khẩu phải >= 6 ký tự"
-        if (credentials.password != credentials.confirmPassword) return "Mật khẩu xác nhận không khớp"
-        return null
+            // Dummy validation
+            if (_credentials.username.isBlank() ||
+                _credentials.fullname.isBlank() ||
+                _credentials.email.isBlank() ||
+                _credentials.password.isBlank() ||
+                _credentials.confirmPassword.isBlank()
+            ) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Vui lòng điền đầy đủ thông tin") }
+                return@launch
+            }
+
+            if (_credentials.password != _credentials.confirmPassword) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Mật khẩu không khớp") }
+                return@launch
+            }
+
+            // Giả lập đăng ký thành công
+            _uiState.update { it.copy(isLoading = false, errorMessage = null) }
+            onSuccess()
+        }
     }
 }

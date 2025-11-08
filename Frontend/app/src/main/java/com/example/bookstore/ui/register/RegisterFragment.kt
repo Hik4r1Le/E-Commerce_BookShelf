@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,10 +31,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.bookstore.R
+import com.example.bookstore.data.RegisterCredentials
+import com.example.bookstore.data.RegisterUiState
 import com.example.bookstore.ui.theme.BookstoreTheme
 
+// Fragment hiển thị Register screen
 class RegisterFragment : Fragment(R.layout.fragment_register) {
 
     private val viewModel: RegisterViewModel by viewModels()
@@ -44,30 +49,28 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 RegisterScreen(
-                    uiState = viewModel.uiState.collectAsState().value,
+                    uiState = uiState,
                     onRegister = { credentials ->
                         viewModel.updateCredentials(credentials)
                         viewModel.register {
-                            // Navigate về LoginFragment dummy
                             findNavController().popBackStack()
                         }
                     },
-                    onLoginClick = {
-                        // Khi người dùng nhấn "Đăng nhập" trên header
-                        findNavController().popBackStack()
-                    }
+                    onLoginClick = { findNavController().popBackStack() }
                 )
             }
         }
     }
 }
 
+// Composables
 @Composable
 fun RegisterScreen(
-    onLoginClick: () -> Unit = {},
+    uiState: RegisterUiState,
     onRegister: (RegisterCredentials) -> Unit = {},
-    uiState: RegisterUiState
+    onLoginClick: () -> Unit = {}
 ) {
     var credentials by remember { mutableStateOf(RegisterCredentials()) }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -112,7 +115,6 @@ fun RegisterHeader(onLoginClick: () -> Unit = {}) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.TopCenter)
         )
-
         Text(
             text = "Đăng nhập",
             color = Color.White,
@@ -208,9 +210,7 @@ fun RegisterForm(
             singleLine = true,
             trailingIcon = {
                 val icon = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                IconButton(onClick = onPasswordToggle) {
-                    Icon(icon, contentDescription = null)
-                }
+                IconButton(onClick = onPasswordToggle) { Icon(icon, contentDescription = null) }
             },
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -226,9 +226,7 @@ fun RegisterForm(
             singleLine = true,
             trailingIcon = {
                 val icon = if (confirmPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                IconButton(onClick = onConfirmPasswordToggle) {
-                    Icon(icon, contentDescription = null)
-                }
+                IconButton(onClick = onConfirmPasswordToggle) { Icon(icon, contentDescription = null) }
             },
             visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -276,47 +274,34 @@ fun RegisterForm(
 @Preview(showBackground = true)
 @Composable
 fun PreviewRegisterHeader() {
-    BookstoreTheme {
-        RegisterHeader(onLoginClick = {})
-    }
+    BookstoreTheme { RegisterHeader(onLoginClick = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewRegisterForm() {
     BookstoreTheme {
-        val credentials = remember { mutableStateOf(RegisterCredentials()) }
-        val passwordVisible = remember { mutableStateOf(false) }
-        val confirmPasswordVisible = remember { mutableStateOf(false) }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-        ) {
-            RegisterForm(
-                credentials = credentials.value,
-                onValueChange = { credentials.value = it },
-                passwordVisible = passwordVisible.value,
-                onPasswordToggle = { passwordVisible.value = !passwordVisible.value },
-                confirmPasswordVisible = confirmPasswordVisible.value,
-                onConfirmPasswordToggle = { confirmPasswordVisible.value = !confirmPasswordVisible.value },
-                onRegister = {},
-                uiState = RegisterUiState()
-            )
-        }
+        RegisterForm(
+            credentials = RegisterCredentials(),
+            onValueChange = {},
+            passwordVisible = false,
+            onPasswordToggle = {},
+            confirmPasswordVisible = false,
+            onConfirmPasswordToggle = {},
+            onRegister = {},
+            uiState = RegisterUiState()
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewRegisterScreen() {
-    val fakeUiState = RegisterUiState(isLoading = false)
     BookstoreTheme {
         RegisterScreen(
-            onLoginClick = {},
+            uiState = RegisterUiState(),
             onRegister = {},
-            uiState = fakeUiState
+            onLoginClick = {}
         )
     }
 }

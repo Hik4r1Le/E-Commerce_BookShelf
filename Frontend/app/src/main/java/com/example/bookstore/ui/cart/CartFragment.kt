@@ -34,6 +34,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.bookstore.R
+import com.example.bookstore.data.CartItem
 import com.example.bookstore.ui.theme.BookstoreTheme
 
 class CartFragment : Fragment() {
@@ -49,13 +50,16 @@ class CartFragment : Fragment() {
                 val totalPrice = viewModel.getTotalPrice()
                 val totalItems = viewModel.getTotalItems()
 
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
                     CartScreen(
                         cartItems = items,
                         totalPrice = totalPrice,
                         totalItems = totalItems,
                         onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() },
-                        onCheckoutClick = { /* TODO: Checkout navigation */ },
+                        onCheckoutClick = {},
                         onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
                         onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
                         onDelete = { id -> viewModel.removeItem(id) }
@@ -69,7 +73,7 @@ class CartFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
-    cartItems: List<CartViewModel.CartItem>,
+    cartItems: List<CartItem>,
     totalPrice: Int,
     totalItems: Int,
     onBackClick: () -> Unit = {},
@@ -78,30 +82,56 @@ fun CartScreen(
     onQuantityChange: (Int, Int) -> Unit = { _, _ -> },
     onDelete: (Int) -> Unit = {}
 ) {
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF8F3))) {
-
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFFF8F3))
+    ) {
         // Header
         Row(
-            modifier = Modifier.fillMaxWidth().height(60.dp).background(Color(0xFFA7AAE1)).padding(horizontal = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .background(Color(0xFFA7AAE1))
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = onBackClick) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.DarkGray) }
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.DarkGray)
+            }
             Text("Giỏ hàng", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Box(contentAlignment = Alignment.TopEnd) {
-                Icon(Icons.Filled.ShoppingCart, contentDescription = "Cart", tint = Color.DarkGray, modifier = Modifier.size(32.dp))
+                Icon(
+                    Icons.Filled.ShoppingCart,
+                    contentDescription = "Cart",
+                    tint = Color.DarkGray,
+                    modifier = Modifier.size(32.dp)
+                )
                 if (totalItems > 0) {
                     Box(
-                        modifier = Modifier.size(18.dp).background(Color.Red, shape = CircleShape).align(Alignment.TopEnd),
+                        modifier = Modifier
+                            .size(18.dp)
+                            .background(Color.Red, shape = CircleShape)
+                            .align(Alignment.TopEnd),
                         contentAlignment = Alignment.Center
-                    ) { Text("$totalItems", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    ) {
+                        Text(
+                            "$totalItems",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
 
-        // Cart items
+        // List
         LazyColumn(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(cartItems, key = { it.id }) { item ->
@@ -115,8 +145,17 @@ fun CartScreen(
         }
 
         // Footer
-        Column(modifier = Modifier.fillMaxWidth().background(Color(0xFFFFF8F3)).padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFFFF8F3))
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text("Tổng cộng:", fontSize = 20.sp, fontWeight = FontWeight.Medium)
                 Text("${"%,d".format(totalPrice)} đ", fontSize = 20.sp, color = Color.Red)
             }
@@ -124,26 +163,42 @@ fun CartScreen(
             Button(
                 onClick = onCheckoutClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2AEBB)),
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("Thanh toán", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+            ) {
+                Text(
+                    "Thanh toán",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
     }
 }
 
 @Composable
 fun CartItemCard(
-    item: CartViewModel.CartItem,
+    item: CartItem,
     onCheckedChange: (Boolean) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().border(4.dp, Color(0xFFF2AEBB), RoundedCornerShape(12.dp)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(4.dp, Color(0xFFF2AEBB), RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4)),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(modifier = Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Checkbox(
                 checked = item.checked,
                 onCheckedChange = onCheckedChange,
@@ -157,7 +212,9 @@ fun CartItemCard(
             Image(
                 painter = painterResource(id = item.imageRes),
                 contentDescription = null,
-                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp))
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(8.dp))
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
@@ -168,26 +225,48 @@ fun CartItemCard(
                     Text("${"%,d".format(item.price)} đ", fontSize = 16.sp, color = Color.Red)
                 }
 
-                Row(modifier = Modifier.width(120.dp).height(36.dp).background(Color(0xFFD9D9D9), RoundedCornerShape(8.dp))) {
+                Row(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(36.dp)
+                        .background(Color(0xFFD9D9D9), RoundedCornerShape(8.dp))
+                ) {
                     Box(
-                        modifier = Modifier.weight(1f).fillMaxHeight().clickable { if (item.quantity > 1) onQuantityChange(item.quantity - 1) }.wrapContentSize(Alignment.Center)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { if (item.quantity > 1) onQuantityChange(item.quantity - 1) }
+                            .wrapContentSize(Alignment.Center)
                     ) { Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight().wrapContentSize(Alignment.Center)) { Text("${item.quantity}", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+
                     Box(
-                        modifier = Modifier.weight(1f).fillMaxHeight().clickable { onQuantityChange(item.quantity + 1) }.wrapContentSize(Alignment.Center)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .wrapContentSize(Alignment.Center)
+                    ) { Text("${item.quantity}", fontSize = 16.sp, fontWeight = FontWeight.Medium) }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { onQuantityChange(item.quantity + 1) }
+                            .wrapContentSize(Alignment.Center)
                     ) { Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                 }
             }
-            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black) }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black)
+            }
         }
     }
 }
 
-// Previews
+// Dữ liệu mẫu
 fun previewSampleCartItems() = listOf(
-    CartViewModel.CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
-    CartViewModel.CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
-    CartViewModel.CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
+    CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1, checked = true),
+    CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2, checked = true),
+    CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1, checked = true)
 )
 
 @Preview(showBackground = true)
@@ -226,22 +305,19 @@ fun CartPreviewShort() {
 @Preview(showBackground = true)
 @Composable
 fun CartPreviewMedium() {
-    val items = previewSampleCartItems()
-    val quantities = remember { mutableStateListOf(1, 2, 1) }
+    val items = remember { mutableStateListOf(*previewSampleCartItems().toTypedArray()) }
 
     BookstoreTheme {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(items) { item ->
                 val idx = items.indexOf(item)
                 CartItemCard(
-                    item = item.copy(quantity = quantities[idx]),
-                    onCheckedChange = {},
-                    onQuantityChange = { newQty -> quantities[idx] = newQty },
+                    item = item,
+                    onCheckedChange = { checked -> items[idx] = items[idx].copy(checked = checked) },
+                    onQuantityChange = { qty -> items[idx] = items[idx].copy(quantity = qty) },
                     onDelete = {}
                 )
             }
@@ -252,15 +328,23 @@ fun CartPreviewMedium() {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun CartPreviewFull() {
+    val items = remember { mutableStateListOf(*previewSampleCartItems().toTypedArray()) }
+
     BookstoreTheme {
         CartScreen(
-            cartItems = previewSampleCartItems(),
-            totalPrice = previewSampleCartItems().sumOf { it.price * it.quantity },
-            totalItems = previewSampleCartItems().sumOf { it.quantity },
+            cartItems = items,
+            totalPrice = items.sumOf { it.price * it.quantity },
+            totalItems = items.sumOf { it.quantity },
             onBackClick = {},
             onCheckoutClick = {},
-            onCheckedChange = { _, _ -> },
-            onQuantityChange = { _, _ -> },
+            onCheckedChange = { id, checked ->
+                val idx = items.indexOfFirst { it.id == id }
+                if (idx != -1) items[idx] = items[idx].copy(checked = checked)
+            },
+            onQuantityChange = { id, qty ->
+                val idx = items.indexOfFirst { it.id == id }
+                if (idx != -1) items[idx] = items[idx].copy(quantity = qty)
+            },
             onDelete = {}
         )
     }

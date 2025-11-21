@@ -31,21 +31,43 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.bookstore.R
-import com.example.bookstore.model.CartItem
+import com.example.bookstore.api.cart.CartApi
+import com.example.bookstore.api.cart.CartRepository
 import com.example.bookstore.ui.theme.BookstoreTheme
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class CartFragment : Fragment() {
 
-    private val viewModel: CartViewModel by viewModels()
+    private val viewModel: CartViewModel by lazy {
+
+        // Tạo Retrofit (sửa lại baseURL đúng API của bạn)
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://your-api.com/") // TODO: đổi lại base url thật
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val api = retrofit.create(CartApi::class.java)
+        val repo = CartRepository(api)
+
+        ViewModelProvider(this, object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return CartViewModel(repo) as T
+            }
+        })[CartViewModel::class.java]
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = ComposeView(requireContext()).apply {
+
         setContent {
             BookstoreTheme {
+
                 val items by viewModel.cartItems.collectAsStateWithLifecycle()
                 val totalPrice = viewModel.getTotalPrice()
                 val totalItems = viewModel.getTotalItems()
@@ -58,11 +80,19 @@ class CartFragment : Fragment() {
                         cartItems = items,
                         totalPrice = totalPrice,
                         totalItems = totalItems,
-                        onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() },
-                        onCheckoutClick = {},
-                        onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
-                        onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
-                        onDelete = { id -> viewModel.removeItem(id) }
+                        onBackClick = {
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                        },
+                        onCheckoutClick = { /* TODO: Điều hướng qua Checkout */ },
+                        onCheckedChange = { id, checked ->
+                            viewModel.toggleChecked(id, checked)
+                        },
+                        onQuantityChange = { id, qty ->
+                            viewModel.updateQuantity(id, qty)
+                        },
+                        onDelete = { id ->
+                            viewModel.removeItem(id)
+                        }
                     )
                 }
             }
@@ -73,7 +103,7 @@ class CartFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
-    cartItems: List<CartItem>,
+    cartItems: List<CartViewModel.CartItem>,
     totalPrice: Int,
     totalItems: Int,
     onBackClick: () -> Unit = {},
@@ -87,6 +117,7 @@ fun CartScreen(
             .fillMaxSize()
             .background(Color(0xFFFFF8F3))
     ) {
+
         // Header
         Row(
             modifier = Modifier
@@ -127,7 +158,7 @@ fun CartScreen(
             }
         }
 
-        // List
+        // Cart items
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -157,7 +188,11 @@ fun CartScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Tổng cộng:", fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                Text("${"%,d".format(totalPrice)} đ", fontSize = 20.sp, color = Color.Red)
+                Text(
+                    "${"%,d".format(totalPrice)} đ",
+                    fontSize = 20.sp,
+                    color = Color.Red
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(
@@ -181,7 +216,7 @@ fun CartScreen(
 
 @Composable
 fun CartItemCard(
-    item: CartItem,
+    item: CartViewModel.CartItem,
     onCheckedChange: (Boolean) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDelete: () -> Unit
@@ -199,6 +234,7 @@ fun CartItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Checkbox(
                 checked = item.checked,
                 onCheckedChange = onCheckedChange,
@@ -209,6 +245,7 @@ fun CartItemCard(
                     checkmarkColor = Color.White
                 )
             )
+
             Image(
                 painter = painterResource(id = item.imageRes),
                 contentDescription = null,
@@ -217,12 +254,20 @@ fun CartItemCard(
                     .clip(RoundedCornerShape(8.dp))
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
                 Column {
                     Text(item.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2)
                     Text(item.author, fontSize = 14.sp, color = Color.Gray, maxLines = 2)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("${"%,d".format(item.price)} đ", fontSize = 16.sp, color = Color.Red)
+                    Text(
+                        "${"%,d".format(item.price)} đ",
+                        fontSize = 16.sp,
+                        color = Color.Red
+                    )
                 }
 
                 Row(
@@ -255,6 +300,7 @@ fun CartItemCard(
                     ) { Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
                 }
             }
+
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.Black)
             }
@@ -262,11 +308,12 @@ fun CartItemCard(
     }
 }
 
-// Dữ liệu mẫu
+// Previews
+
 fun previewSampleCartItems() = listOf(
-    CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1, checked = true),
-    CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2, checked = true),
-    CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1, checked = true)
+    CartViewModel.CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
+    CartViewModel.CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
+    CartViewModel.CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
 )
 
 @Preview(showBackground = true)
@@ -305,19 +352,22 @@ fun CartPreviewShort() {
 @Preview(showBackground = true)
 @Composable
 fun CartPreviewMedium() {
-    val items = remember { mutableStateListOf(*previewSampleCartItems().toTypedArray()) }
+    val items = previewSampleCartItems()
+    val quantities = remember { mutableStateListOf(1, 2, 1) }
 
     BookstoreTheme {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(items) { item ->
                 val idx = items.indexOf(item)
                 CartItemCard(
-                    item = item,
-                    onCheckedChange = { checked -> items[idx] = items[idx].copy(checked = checked) },
-                    onQuantityChange = { qty -> items[idx] = items[idx].copy(quantity = qty) },
+                    item = item.copy(quantity = quantities[idx]),
+                    onCheckedChange = {},
+                    onQuantityChange = { newQty -> quantities[idx] = newQty },
                     onDelete = {}
                 )
             }
@@ -328,23 +378,15 @@ fun CartPreviewMedium() {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun CartPreviewFull() {
-    val items = remember { mutableStateListOf(*previewSampleCartItems().toTypedArray()) }
-
     BookstoreTheme {
         CartScreen(
-            cartItems = items,
-            totalPrice = items.sumOf { it.price * it.quantity },
-            totalItems = items.sumOf { it.quantity },
+            cartItems = previewSampleCartItems(),
+            totalPrice = previewSampleCartItems().sumOf { it.price * it.quantity },
+            totalItems = previewSampleCartItems().sumOf { it.quantity },
             onBackClick = {},
             onCheckoutClick = {},
-            onCheckedChange = { id, checked ->
-                val idx = items.indexOfFirst { it.id == id }
-                if (idx != -1) items[idx] = items[idx].copy(checked = checked)
-            },
-            onQuantityChange = { id, qty ->
-                val idx = items.indexOfFirst { it.id == id }
-                if (idx != -1) items[idx] = items[idx].copy(quantity = qty)
-            },
+            onCheckedChange = { _, _ -> },
+            onQuantityChange = { _, _ -> },
             onDelete = {}
         )
     }

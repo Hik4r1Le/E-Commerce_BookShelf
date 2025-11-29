@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -53,6 +55,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.legacy.support.v4)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -73,6 +76,15 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.5")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Dùng để cho phép Retrofit sử dụng Gson để chuyển đổi JSON
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
+    // Thư viện Coroutines Test cho môi trường Unit Test
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
 }

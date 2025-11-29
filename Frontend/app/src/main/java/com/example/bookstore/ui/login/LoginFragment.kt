@@ -52,27 +52,88 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.bookstore.model.LoginCredentials
 import com.example.bookstore.ui.theme.BookstoreTheme
 import androidx.fragment.app.viewModels
-
+import androidx.navigation.fragment.findNavController
+import androidx.compose.runtime.LaunchedEffect
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.example.bookstore.R.string as R_string
 
 class LoginFragment : Fragment(R.layout.fragment_login) {
+    private val viewModel: LoginViewModel by viewModels {
+        LoginViewModelFactory(requireContext())
+    }
 
-    private val viewModel: LoginViewModel by viewModels()
+    private lateinit var googleSignInClient: GoogleSignInClient
+
+    // Contract để xử lý kết quả trả về từ Google Sign-In Activity
+    private val googleSignInLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account.idToken
+
+                if (idToken != null) {
+                    // Gửi ID Token lên ViewModel
+                    viewModel.loginWithGoogleIdToken(idToken)
+                } else {
+                    viewModel.onErrorMessageChange("Đăng nhập Google thất bại: Không nhận được ID Token.")
+                }
+            } catch (e: ApiException) {
+                // Xử lý lỗi (ví dụ: người dùng hủy, lỗi mạng)
+                viewModel.onErrorMessageChange("Đăng nhập Google thất bại: Lỗi ${e.statusCode}")
+            }
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.google_client_id))
+            .requestEmail()
+            .build()
+
+        googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
+    }
+
+    // Hàm được gọi khi nhấn nút Google
+    private fun signInWithGoogle() {
+        val signInIntent = googleSignInClient.signInIntent
+        googleSignInLauncher.launch(signInIntent)
+        viewModel.clearError()
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
+                LaunchedEffect(viewModel.loginResponse) {
+                    if (viewModel.loginResponse != null) {
+                        // Chuyển sang màn hình chính
+                        val action = LoginFragmentDirections.actionLoginToHome()
+                        findNavController().navigate(action)
+                        viewModel.clearLoginResponse()
+                    }
+                }
+
                 LoginScreen(
-                    onRegisterClick = { /* navigate to register */ },
-                    onLogin = { credentials -> viewModel.login(onSuccess = { /* navigate home */ }) },
-                    onForgotPassword = {},
-                    onGoogleLogin = {},
+                    viewModel = viewModel,
+                    onRegisterClick = {
+                        val action = LoginFragmentDirections.actionLoginToRegister()
+                        findNavController().navigate(action)
+                    },
+                    onForgotPassword = {
+                        val action = LoginFragmentDirections.actionLoginToForgotPassword()
+                        findNavController().navigate(action)
+                    },
+                    onGoogleLogin = { signInWithGoogle() },
+                    onLogin = { viewModel.login() }
                 )
             }
         }
@@ -81,10 +142,11 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
 
 @Composable
 fun LoginScreen(
+    viewModel: LoginViewModel,
     onRegisterClick: () -> Unit = {},
     onForgotPassword: () -> Unit = {},
-    onLogin: (LoginCredentials) -> Unit = {},
-    onGoogleLogin: () -> Unit = {}
+    onGoogleLogin: () -> Unit = {},
+    onLogin: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -104,9 +166,10 @@ fun LoginScreen(
                 .padding(24.dp)
         ) {
             LoginForm(
-                onLogin = onLogin,
+                viewModel = viewModel,
                 onForgotPassword = onForgotPassword,
-                onGoogleLogin = onGoogleLogin
+                onGoogleLogin = onGoogleLogin,
+                onLogin = onLogin
             )
         }
     }
@@ -175,12 +238,28 @@ fun LoginHeader(
 
 @Composable
 fun LoginForm(
-    onLogin: (LoginCredentials) -> Unit,
+    viewModel: LoginViewModel,
     onForgotPassword: () -> Unit,
-    onGoogleLogin: () -> Unit
+    onGoogleLogin: () -> Unit,
+    onLogin: () -> Unit
 ) {
-    var credentials by remember { mutableStateOf(LoginCredentials()) }
+    val credentials = viewModel.credentials
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
+
     var passwordVisible by remember { mutableStateOf(false) }
+
+    if (errorMessage != null) {
+        // Bạn có thể dùng Snackbar hoặc AlertDialog để hiển thị lỗi.
+        // Ví dụ: hiển thị một Text màu đỏ đơn giản
+        Text(
+            text = errorMessage,
+            color = Color.Red,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        // Trong dự án thực tế, bạn nên dùng LaunchedEffect để hiển thị Toast/Snackbar
+        // và tự động clearError() sau khi hiển thị.
+    }
 
     Column(
         modifier = Modifier
@@ -188,11 +267,11 @@ fun LoginForm(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Username
+        // Email
         OutlinedTextField(
-            value = credentials.username,
-            onValueChange = { credentials = credentials.copy(username = it) },
-            label = { Text("Tên tài khoản") },
+            value = credentials.email,
+            onValueChange = { viewModel.onEmailChange(it) },
+            label = { Text("Email người dùng") },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -203,7 +282,7 @@ fun LoginForm(
         // Password
         OutlinedTextField(
             value = credentials.password,
-            onValueChange = { credentials = credentials.copy(password = it) },
+            onValueChange = { viewModel.onPasswordChange(it) },
             label = { Text("Mật khẩu") },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
@@ -231,24 +310,43 @@ fun LoginForm(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-        LoginButton { onLogin(credentials) }
+        LoginButton(
+            isLoading = isLoading,
+            onClick = { onLogin() }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
-        GoogleLoginButton(onGoogleLogin)
+        GoogleLoginButton(
+            onClick = {
+                viewModel.clearError()
+                onGoogleLogin()
+            }
+        )
     }
 }
 
 @Composable
-fun LoginButton(onClick: () -> Unit) {
+fun LoginButton(
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
     Button(
-        onClick = onClick,
+        onClick = { if (!isLoading) onClick() }, // tránh spam click
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF48FB1)),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
     ) {
-        Text("Đăng nhập", fontWeight = FontWeight.Bold, color = Color.White)
+        if (isLoading) {
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = Color.White,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text("Đăng nhập", fontWeight = FontWeight.Bold, color = Color.White)
+        }
     }
 }
 @Composable
@@ -285,30 +383,31 @@ fun PreviewLoginHeader() {
     )
 }
 
-@Preview (
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_NO
-)
-@Composable
-fun PreviewLoginForm() {
-    LoginForm(
-        onLogin = {},
-        onForgotPassword = {},
-        onGoogleLogin = {},
-    )
-}
 
-@Preview (
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_NO
-)
-@Composable
-fun PreviewLoginScreen() {
-    BookstoreTheme { //dùng này để xem preview với font chữ mà em cài sẵn
-        LoginScreen(
-            onLogin = {},
-            onForgotPassword = {},
-            onGoogleLogin = {},
-        )
-    }
-}
+//@Preview (
+//    showBackground = true,
+//    uiMode = Configuration.UI_MODE_NIGHT_NO
+//)
+//@Composable
+//fun PreviewLoginForm() {
+//    LoginForm(
+//        onLogin = {},
+//        onForgotPassword = {},
+//        onGoogleLogin = {},
+//    )
+//}
+//
+//@Preview (
+//    showBackground = true,
+//    uiMode = Configuration.UI_MODE_NIGHT_NO
+//)
+//@Composable
+//fun PreviewLoginScreen() {
+//    BookstoreTheme { //dùng này để xem preview với font chữ mà em cài sẵn
+//        LoginScreen(
+//            onLogin = {},
+//            onForgotPassword = {},
+//            onGoogleLogin = {},
+//        )
+//    }
+//}

@@ -50,28 +50,65 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.style.TextAlign
 
+import androidx.fragment.app.viewModels
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.CircularProgressIndicator
+import coil.compose.AsyncImage
+import com.example.bookstore.model.products.ProductDetailUI
+import java.text.NumberFormat
+import java.util.Locale
+import androidx.navigation.fragment.navArgs
+import androidx.navigation.fragment.findNavController
+
 class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
+     private val args: BookDetailFragmentArgs by navArgs()
+     private val productId: String = args.productId
+
+    private val viewModel: BookDetailViewModel by viewModels {
+        BookDetailViewModelFactory(requireContext())
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Tự động gọi API khi Fragment được tạo
+        viewModel.loadProductDetail(productId)
+
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
-
+                BookDetailScreen(
+                    viewModel = viewModel,
+                    onBackClick = {
+                        findNavController().popBackStack()
+                    },
+                    onAddToCart = { bookId ->
+                        // Xử lý thêm vào giỏ hàng
+                    }
+                )
             }
         }
     }
 }
 
+// HÀM EXTENSION ĐỊNH DẠNG TIỀN TỆ
+fun Double.toCurrencyString(): String {
+    val formatter = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
+    return formatter.format(this).replace("₫", "VNĐ")
+}
+
 @Composable
 fun BookDetailScreen(
-    book: BookDetailData,
-    comments: List<UserCommentData>,
+    viewModel: BookDetailViewModel,
     onBackClick: () -> Unit,
-    onAddToCart: (BookDetailData) -> Unit
+    onAddToCart: (String) -> Unit
 ) {
-    var quantity = remember { mutableStateOf(1) }
+    val productDetail = viewModel.productDetail // Dữ liệu thật
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
+
+    val quantityState = remember { mutableStateOf(1) }
+    val quantity = quantityState.value
 
     Column(
         modifier = Modifier
@@ -81,53 +118,72 @@ fun BookDetailScreen(
         // Header (top bar)
         BookDetailHeader(onBackClick = onBackClick)
 
-        // Main scrollable content
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp)
-        ) {
-            item {
-                BookDetailCard(
-                    book = book,
-                    onAddToCart = onAddToCart
-                )
+        if (isLoading) {
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                Text("Đang tải chi tiết sản phẩm...", modifier = Modifier.padding(top = 16.dp))
+            }
+        } else if (errorMessage != null) {
+            Text("Lỗi: $errorMessage", color = Color.Red, modifier = Modifier.padding(16.dp))
+        } else if (productDetail != null) {
+            val book = productDetail // Sử dụng dữ liệu đã tải
+
+            // Main scrollable content
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            ) {
+                item {
+                    BookDetailCard(
+                        book = book,
+                        onAddToCart = onAddToCart
+                    )
+                }
+
+                item {
+                    BookDescriptionCard(description = book.description)
+                }
+
+                // Reader Comments
+                item {
+                    Text(
+                        text = "Bình luận của người đọc (${book.comments.size})",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                    )
+                }
+
+                items(book.comments) { comment ->
+                    UserCommentCard(
+                        username = comment.username,
+                        rating = comment.rating.toFloat(), // Chuyển đổi Double sang Float
+                        comment = comment.comment
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(80.dp)) } // space for footer overlap
             }
 
-            item {
-                BookDescriptionCard(description = book.description)
-            }
-
-            // Reader Comments
-            item {
-                Text(
-                    text = "Bình luận của người đọc",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.Black,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            items(comments) { comment ->
-                UserCommentCard(
-                    username = comment.username,
-                    rating = comment.rating,
-                    comment = comment.comment
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(80.dp)) } // space for footer overlap
+            // Footer
+            FooterSection(
+                quantity = quantity,
+                onIncrease = { quantityState.value++ },
+                onDecrease = { if (quantityState.value > 1) quantityState.value-- },
+                // Tính giá: Giá gốc * (1 - discount) * số lượng
+                price = book.price * (1 - book.discount) * quantity,
+                onAddToCart = { onAddToCart(book.id) }
+            )
+        } else {
+            // Hiển thị khi không tìm thấy sản phẩm
+            Text("Không tìm thấy sản phẩm này.", modifier = Modifier.fillMaxSize().padding(32.dp))
         }
-
-        // Footer (your version)
-        FooterSection(
-            quantity = quantity.value,
-            onIncrease = { quantity.value++ },
-            onDecrease = { if (quantity.value > 1) quantity.value-- },
-            price = book.price * quantity.value,
-            onAddToCart = { onAddToCart(book) }
-        )
     }
 }
 
@@ -173,8 +229,8 @@ fun BookDetailHeader(onBackClick: () -> Unit) {
 
 @Composable
 fun BookDetailCard(
-    book: BookDetailData,
-    onAddToCart: (BookDetailData) -> Unit
+    book: ProductDetailUI,
+    onAddToCart: (String) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -191,18 +247,16 @@ fun BookDetailCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = book.category,
+                text = book.categoryName,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            Image(
-                painter = painterResource(id = book.imageRes),
-                contentDescription = book.title,
+            AsyncImage(
+                model = book.imageUrl,
+                contentDescription = book.name,
                 modifier = Modifier
-//                    .height(180.dp)
-//                    .width(150.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
@@ -218,14 +272,14 @@ fun BookDetailCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = book.title,
+                text = book.name,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Tác giả: ${book.author}",
+                text = "Tác giả: ${book.authorName}",
                 fontSize = 14.sp,
                 color = Color.DarkGray
             )
@@ -236,13 +290,20 @@ fun BookDetailCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                repeat(5) { index ->
-                    val starValue = book.star - index
-                    DisplayStar(starValue)
-                }
+                RatingBar(rating = book.ratingAvg.toFloat())
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+fun RatingBar(rating: Float, maxStars: Int = 5) {
+    Row {
+        for (i in 1..maxStars) {
+            val starValue = rating - (i - 1)
+            DisplayStar(starValue)
         }
     }
 }
@@ -351,7 +412,7 @@ fun FooterSection(
             }
 
             Text(
-                text = String.format("%,.0f đ", price),
+                text = price.toCurrencyString(),
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
                 color = Color.Black
@@ -463,24 +524,24 @@ fun PreViewHeader(){
     )
 }
 
-@Preview
-@Composable
-fun PreviewBookDetail(){
-    val data = BookDetailData(
-        id = 1,
-        title = "Cánh đồng bất tận",
-        author = "Nguyễn Ngọc Tự",
-        category = "Văn học",
-        imageRes = R.drawable.book5,
-        description = "",
-        price = 1.0,
-        star = 5f
-    )
-    BookDetailCard(
-        onAddToCart = {},
-        book = data
-    )
-}
+//@Preview
+//@Composable
+//fun PreviewBookDetail(){
+//    val data = BookDetailData(
+//        id = 1,
+//        title = "Cánh đồng bất tận",
+//        author = "Nguyễn Ngọc Tự",
+//        category = "Văn học",
+//        imageRes = R.drawable.book5,
+//        description = "",
+//        price = 1.0,
+//        star = 5f
+//    )
+//    BookDetailCard(
+//        onAddToCart = {},
+//        book = data
+//    )
+//}
 
 @Preview
 @Composable
@@ -520,40 +581,40 @@ fun PreviewComment() {
     )
 }
 
-@Preview(
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_NO
-)
-@Composable
-fun PreviewBookDetailScreen() {
-    val sampleBook = BookDetailData(
-        id = 1,
-        title = "Cánh đồng bất tận",
-        author = "Nguyễn Ngọc Tư",
-        category = "Văn học",
-        imageRes = R.drawable.book5,
-        description = """
-            Cánh Đồng Bất Tận đưa người đọc vào đời sống giản dị, đầy chất thơ của miền Tây sông nước, 
-            khắc họa cô đơn, tình yêu và hy vọng qua những mảnh đời mộc mạc.
-
-            Phù hợp với: Người yêu văn học miền Tây, thích những câu chuyện tinh tế, giàu nhân văn.
-        """.trimIndent(),
-        price = 86000.0,
-        star = 4.5f
-    )
-
-    val sampleComments = listOf(
-        UserCommentData("hik4r1le", 5f, "Sách đỉnh vcl"),
-        UserCommentData("BaoTram161", 3.5f, "Ok"),
-        UserCommentData("ngquocvuong23", 2f, "vl cai deo gi day")
-    )
-
-    BookstoreTheme {
-        BookDetailScreen(
-            book = sampleBook,
-            comments = sampleComments,
-            onBackClick = {},
-            onAddToCart = {}
-        )
-    }
-}
+//@Preview(
+//    showBackground = true,
+//    uiMode = Configuration.UI_MODE_NIGHT_NO
+//)
+//@Composable
+//fun PreviewBookDetailScreen() {
+//    val sampleBook = BookDetailData(
+//        id = 1,
+//        title = "Cánh đồng bất tận",
+//        author = "Nguyễn Ngọc Tư",
+//        category = "Văn học",
+//        imageRes = R.drawable.book5,
+//        description = """
+//            Cánh Đồng Bất Tận đưa người đọc vào đời sống giản dị, đầy chất thơ của miền Tây sông nước,
+//            khắc họa cô đơn, tình yêu và hy vọng qua những mảnh đời mộc mạc.
+//
+//            Phù hợp với: Người yêu văn học miền Tây, thích những câu chuyện tinh tế, giàu nhân văn.
+//        """.trimIndent(),
+//        price = 86000.0,
+//        star = 4.5f
+//    )
+//
+//    val sampleComments = listOf(
+//        UserCommentData("hik4r1le", 5f, "Sách đỉnh vcl"),
+//        UserCommentData("BaoTram161", 3.5f, "Ok"),
+//        UserCommentData("ngquocvuong23", 2f, "vl cai deo gi day")
+//    )
+//
+//    BookstoreTheme {
+//        BookDetailScreen(
+//            book = sampleBook,
+//            comments = sampleComments,
+//            onBackClick = {},
+//            onAddToCart = {}
+//        )
+//    }
+//}

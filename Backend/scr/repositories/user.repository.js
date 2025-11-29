@@ -10,7 +10,7 @@ export const findManyUser = async (filter, option, orderBy, skip, take) =>
 export const createUser = async (data, option) =>
     await prisma.user.create(queryBuilder(null, option, data));
 
-export const updateUser = async (filter, data) =>
-    await prisma.user.update(queryBuilder(filter, null, data));
+export const updateUser = async (filter, option, data) =>
+    await prisma.user.update(queryBuilder(filter, option, data));
 
 

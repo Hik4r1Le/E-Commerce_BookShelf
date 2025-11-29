@@ -2,6 +2,7 @@ import { createUser, findUser, updateUser } from "../repositories/user.repositor
 import { createOrUpdateOtp, findOtp, deleteOtp, checkOtpIsExpired } from "../repositories/otp.repository.js"
 import { generateAccessToken, hashStringByBcrypt, compareByBcrypt } from "../utils/auth.util.js"
 import { sendOtpByEmail } from "../utils/email.utils.js"
+import { OAuth2Client } from 'google-auth-library';
 
 export const loginWithEmail = async (email, password) => {
     const user = await findUser({ email });
@@ -25,6 +26,27 @@ export const loginWithEmail = async (email, password) => {
     }
 
     return generateAccessToken(user);
+}
+
+export const loginWithGoogleFromMobile = async (idToken) => {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID_ANDROID;
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+    const ticket = await client.verifyIdToken({
+        idToken,
+        audience: GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const profile = {
+        id: payload.sub,
+        emails: [{ value: payload.email, verified: payload.email_verified }],
+        displayName: payload.name,
+        photos: [{ value: payload.picture }],
+        _json: { email_verified: payload.email_verified }
+    };
+
+    return await loginOrRegisterWithGoogle(profile);
 }
 
 export const loginOrRegisterWithGoogle = async (profile) => {
@@ -83,20 +105,30 @@ export const registerWithEmail = async (email, username, password) => {
         if (user.google_id) {
             return await updateUser(
                 { email },
+                {
+                    id: true,
+                    email: true
+                },
                 { password_hash: hashPassword, username, is_email_verified: true }
             );
         }
     }
 
-    const newUser = await createUser({
-        email,
-        username,
-        password_hash: hashPassword,
-        is_email_verified: false,
-        profile: {
-            create: {}
+    const newUser = await createUser(
+        {
+            email,
+            username,
+            password_hash: hashPassword,
+            is_email_verified: false,
+            profile: {
+                create: {}
+            }
+        },
+        {
+            id: true,
+            email: true,
         }
-    });
+    );
     await sendOrResendOtp(email, "VERIFY_EMAIL");
 
     return newUser;

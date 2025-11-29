@@ -32,10 +32,15 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.bookstore.R
 import com.example.bookstore.ui.theme.BookstoreTheme
+import androidx.lifecycle.ViewModelProvider
+import androidx.compose.runtime.State
+import androidx.navigation.fragment.findNavController
 
 class RegisterFragment : Fragment(R.layout.fragment_register) {
 
-    private val viewModel: RegisterViewModel by viewModels()
+    private val viewModel: RegisterViewModel by viewModels() {
+        RegisterViewModelFactory(requireContext())
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -43,14 +48,18 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         composeView.setContent {
             BookstoreTheme {
                 RegisterScreen(
-                    uiState = viewModel.uiState.collectAsState().value,
-                    onRegister = { credentials ->
-                        viewModel.updateCredentials(credentials)
-                        viewModel.register {
-                            // TODO: navigate next
-                        }
+                    viewModel = viewModel,
+                    onLoginClick = {
+                        val action = RegisterFragmentDirections.actionRegisterToLogin()
+                        findNavController().navigate(action)
                     },
-                    onLoginClick = {}
+                    onRegisterSuccess = { email ->
+                        val action = RegisterFragmentDirections.actionRegisterToOtp(
+                            email = email,
+                            otpType = "VERIFY_EMAIL"
+                        )
+                        findNavController().navigate(action)
+                    }
                 )
             }
         }
@@ -60,11 +69,14 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
 // Composables
 @Composable
 fun RegisterScreen(
+    viewModel: RegisterViewModel,
     onLoginClick: () -> Unit = {},
-    onRegister: (RegisterCredentials) -> Unit = {},
-    uiState: RegisterUiState
+    onRegisterSuccess: (String) -> Unit
 ) {
-    var credentials by remember { mutableStateOf(RegisterCredentials()) }
+    // Lấy UI State từ ViewModel
+    val uiState = viewModel.uiState.value
+    val credentials = uiState.credentials
+
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
@@ -81,12 +93,20 @@ fun RegisterScreen(
         ) {
             RegisterForm(
                 credentials = credentials,
-                onValueChange = { credentials = it },
+
+                // Event Handlers
+                onEmailChange = viewModel::onEmailChange,
+                onUsernameChange = viewModel::onUsernameChange,
+                onPasswordChange = viewModel::onPasswordChange,
+                onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
+
                 passwordVisible = passwordVisible,
                 onPasswordToggle = { passwordVisible = !passwordVisible },
                 confirmPasswordVisible = confirmPasswordVisible,
                 onConfirmPasswordToggle = { confirmPasswordVisible = !confirmPasswordVisible },
-                onRegister = { onRegister(credentials) },
+                onRegister = {
+                    viewModel.register(onSuccess = onRegisterSuccess)
+                },
                 uiState = uiState
             )
         }
@@ -141,7 +161,10 @@ fun RegisterHeader(onLoginClick: () -> Unit = {}) {
 @Composable
 fun RegisterForm(
     credentials: RegisterCredentials,
-    onValueChange: (RegisterCredentials) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onUsernameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onConfirmPasswordChange: (String) -> Unit,
     passwordVisible: Boolean,
     onPasswordToggle: () -> Unit,
     confirmPasswordVisible: Boolean,
@@ -157,23 +180,23 @@ fun RegisterForm(
     ) {
         OutlinedTextField(
             value = credentials.username,
-            onValueChange = { onValueChange(credentials.copy(username = it)) },
+            onValueChange = onUsernameChange,
             label = { Text("Tên tài khoản (*)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = credentials.fullname,
-            onValueChange = { onValueChange(credentials.copy(fullname = it)) },
-            label = { Text("Họ và tên (*)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+//        OutlinedTextField(
+//            value = credentials.fullname,
+//            onValueChange = { onValueChange(credentials.copy(fullname = it)) },
+//            label = { Text("Họ và tên (*)") },
+//            singleLine = true,
+//            modifier = Modifier.fillMaxWidth()
+//        )
+//        Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = credentials.email,
-            onValueChange = { onValueChange(credentials.copy(email = it)) },
+            onValueChange = onEmailChange,
             label = { Text("Email (*)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -182,7 +205,7 @@ fun RegisterForm(
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = credentials.password,
-            onValueChange = { onValueChange(credentials.copy(password = it)) },
+            onValueChange = onPasswordChange,
             label = { Text("Mật khẩu (*)") },
             singleLine = true,
             trailingIcon = {
@@ -196,7 +219,7 @@ fun RegisterForm(
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = credentials.confirmPassword,
-            onValueChange = { onValueChange(credentials.copy(confirmPassword = it)) },
+            onValueChange = onConfirmPasswordChange,
             label = { Text("Nhập lại mật khẩu (*)") },
             singleLine = true,
             trailingIcon = {
@@ -210,16 +233,21 @@ fun RegisterForm(
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onRegister,
+            enabled = !uiState.isLoading,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF48FB1)),
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
-            Text("Đăng ký", fontWeight = FontWeight.Bold, color = Color.White)
+            if (uiState.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+            } else {
+                Text("Đăng ký", fontWeight = FontWeight.Bold, color = Color.White)
+            }
         }
 
-        if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(16.dp))
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
+//        if (uiState.isLoading) {
+//            Spacer(modifier = Modifier.height(16.dp))
+//            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+//        }
 
         uiState.errorMessage?.let {
             Text(text = it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
@@ -236,49 +264,49 @@ fun RegisterForm(
     }
 }
 
-// Previews
-@Preview(showBackground = true)
-@Composable
-fun PreviewRegisterHeader() {
-    BookstoreTheme { RegisterHeader(onLoginClick = {}) }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewRegisterForm() {
-    BookstoreTheme {
-        val credentials = remember { mutableStateOf(RegisterCredentials()) }
-        val passwordVisible = remember { mutableStateOf(false) }
-        val confirmPasswordVisible = remember { mutableStateOf(false) }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-        ) {
-            RegisterForm(
-                credentials = credentials.value,
-                onValueChange = { credentials.value = it },
-                passwordVisible = passwordVisible.value,
-                onPasswordToggle = { passwordVisible.value = !passwordVisible.value },
-                confirmPasswordVisible = confirmPasswordVisible.value,
-                onConfirmPasswordToggle = { confirmPasswordVisible.value = !confirmPasswordVisible.value },
-                onRegister = {},
-                uiState = RegisterUiState()
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewRegisterScreen() {
-    val fakeUiState = RegisterUiState(isLoading = false)
-    BookstoreTheme {
-        RegisterScreen(
-            onLoginClick = {},
-            onRegister = {},
-            uiState = fakeUiState
-        )
-    }
-}
+//// Previews
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewRegisterHeader() {
+//    BookstoreTheme { RegisterHeader(onLoginClick = {}) }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewRegisterForm() {
+//    BookstoreTheme {
+//        val credentials = remember { mutableStateOf(RegisterCredentials()) }
+//        val passwordVisible = remember { mutableStateOf(false) }
+//        val confirmPasswordVisible = remember { mutableStateOf(false) }
+//
+//        Box(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+//        ) {
+//            RegisterForm(
+//                credentials = credentials.value,
+//                onValueChange = { credentials.value = it },
+//                passwordVisible = passwordVisible.value,
+//                onPasswordToggle = { passwordVisible.value = !passwordVisible.value },
+//                confirmPasswordVisible = confirmPasswordVisible.value,
+//                onConfirmPasswordToggle = { confirmPasswordVisible.value = !confirmPasswordVisible.value },
+//                onRegister = {},
+//                uiState = RegisterUiState()
+//            )
+//        }
+//    }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewRegisterScreen() {
+//    val fakeUiState = RegisterUiState(isLoading = false)
+//    BookstoreTheme {
+//        RegisterScreen(
+//            onLoginClick = {},
+//            onRegister = {},
+//            uiState = fakeUiState
+//        )
+//    }
+//}

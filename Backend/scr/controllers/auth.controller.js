@@ -19,15 +19,30 @@ export const handleGoogleCallback = async (req, res, next) => {
     }
 }
 
+export const handleGoogleMobileAuth = async (req, res, next) => {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) {
+            const error = new Error("ID Token required");
+            error.statusCode = 400;
+            throw new error;
+        }
+        const token = await authService.loginWithGoogleFromMobile(idToken);
+        res.status(200).json({ success: true, data: { token } });
+    } catch (err) {
+        next(err);
+    }
+}
+
 export const registerWithEmail = async (req, res, next) => {
     try {
         const { email, username, password } = req.validated.body;
         const newUser = await authService.registerWithEmail(email, username, password);
         if (newUser) {
             if (newUser.google_id)
-                res.status(201).json({ success: true, data: { newUser, is_account_verified: true } });
+                res.status(201).json({ success: true, data: { new_user: newUser, is_account_verified: true } });
             else
-                res.status(201).json({ success: true, data: { newUser, is_account_verified: false } });
+                res.status(201).json({ success: true, data: { new_user: newUser, is_account_verified: false } });
         }
         else {
             const err = new Error("User registration failed");

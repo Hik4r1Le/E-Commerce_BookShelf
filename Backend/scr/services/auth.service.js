@@ -74,7 +74,13 @@ export const loginOrRegisterWithGoogle = async (profile) => {
     let user = await findUser({ email });
     if (user) {
         if (!user.google_id) {
-            user = await updateUser({ email }, { google_id: googleId, is_email_verified: true });
+            user = await updateUser(
+                { email },
+                {
+                    id: true,
+                    email: true
+                },
+                { google_id: googleId, is_email_verified: true });
         }
     } else {
         user = await createUser({
@@ -153,7 +159,13 @@ export const verifyOtp = async (email, otp, type) => {
     let result = {};
 
     if (type === "VERIFY_EMAIL") {
-        await updateUser({ email }, { is_email_verified: true });
+        await updateUser(
+            { email },
+            {
+                id: true,
+                email: true
+            },
+            { is_email_verified: true });
         result = {
             isSuccessVerify: true
         }
@@ -217,6 +229,10 @@ export const resetPasswordForUser = async (email, newPassword) => {
 
     await updateUser(
         { email },
+        {
+            id: true,
+            email: true
+        },
         { password_hash: await hashStringByBcrypt(newPassword) }
     )
 }

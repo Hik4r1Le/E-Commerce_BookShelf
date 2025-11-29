@@ -59,17 +59,28 @@ import java.text.NumberFormat
 import java.util.Locale
 import androidx.navigation.fragment.navArgs
 import androidx.navigation.fragment.findNavController
+import androidx.lifecycle.ViewModelProvider
 
 class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
-     private val args: BookDetailFragmentArgs by navArgs()
-     private val productId: String = args.productId
+//     private val args: BookDetailFragmentArgs by navArgs()
+//     private val productId: String = args.productId
+//
+//    private val viewModel: BookDetailViewModel by viewModels {
+//        BookDetailViewModelFactory(requireContext())
+//    }
 
-    private val viewModel: BookDetailViewModel by viewModels {
-        BookDetailViewModelFactory(requireContext())
-    }
+    private val args: BookDetailFragmentArgs by navArgs()
+    private lateinit var viewModel: BookDetailViewModel
+    private lateinit var productId: String
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        productId = args.productId
+
+        viewModel = ViewModelProvider(this, BookDetailViewModelFactory(requireContext()))
+            .get(BookDetailViewModel::class.java)
+
 
         // Tự động gọi API khi Fragment được tạo
         viewModel.loadProductDetail(productId)

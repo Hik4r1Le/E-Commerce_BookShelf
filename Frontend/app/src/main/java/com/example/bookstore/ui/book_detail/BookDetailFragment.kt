@@ -62,13 +62,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.ViewModelProvider
 
 class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
-//     private val args: BookDetailFragmentArgs by navArgs()
-//     private val productId: String = args.productId
-//
-//    private val viewModel: BookDetailViewModel by viewModels {
-//        BookDetailViewModelFactory(requireContext())
-//    }
-
     private val args: BookDetailFragmentArgs by navArgs()
     private lateinit var viewModel: BookDetailViewModel
     private lateinit var productId: String

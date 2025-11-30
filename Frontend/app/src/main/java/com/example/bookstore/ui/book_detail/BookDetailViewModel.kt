@@ -25,7 +25,6 @@ class BookDetailViewModel(
 
     // Hàm gọi API lấy chi tiết sản phẩm
     fun loadProductDetail(productId: String) {
-        // Có thể thêm logic kiểm tra nếu dữ liệu đã tải rồi thì không tải lại
         if (productDetail != null) return
 
         viewModelScope.launch {

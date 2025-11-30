@@ -81,7 +81,6 @@ class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
         viewModel = ViewModelProvider(this, BookDetailViewModelFactory(requireContext()))
             .get(BookDetailViewModel::class.java)
 
-
         // Tự động gọi API khi Fragment được tạo
         viewModel.loadProductDetail(productId)
 

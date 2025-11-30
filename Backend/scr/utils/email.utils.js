@@ -1,11 +1,12 @@
 import nodemailer from "nodemailer";
+import axios from "axios";
 
 export const sendOtpByEmail = async (otp, toEmail) => {
     const transporter = nodemailer.createTransport({
-        service: "gmail", 
+        service: "gmail",
         auth: {
-            user: process.env.EMAIL_FROM,          
-            pass: process.env.EMAIL_APP_PASSWORD,  
+            user: process.env.EMAIL_FROM,
+            pass: process.env.EMAIL_APP_PASSWORD,
         },
     });
 
@@ -32,3 +33,54 @@ export const sendOtpByEmail = async (otp, toEmail) => {
         throw new Error(`Can not send email: ${error.message}`);
     }
 };
+
+export const sendOtpByEmailv2 = async (otp, toEmail) => {
+    try {
+        await axios.post(
+            "https://api.brevo.com/v3/smtp/email",
+            {
+                sender: {
+                    name: "E-Commerce BookShelf",
+                    email: process.env.BREVO_SENDER
+                },
+                to: [
+                    {
+                        email: toEmail
+                    }
+                ],
+                subject: "Mã xác thực OTP",
+                htmlContent: `
+                    <div style="font-family: Arial, sans-serif;">
+                        <h2>Xác thực tài khoản của bạn</h2>
+                        <p>Mã OTP của bạn là:</p>
+                        <h1 style="letter-spacing: 5px;">${otp}</h1>
+                        <p>Mã sẽ hết hạn sau 5 phút.</p>
+                    </div>
+                    `
+            },
+            {
+                headers: {
+                    "api-key": process.env.BREVO_API_KEY,
+                    "content-type": "application/json",
+                    "accept": "application/json"
+                }
+            }
+        );
+
+    } catch (error) {
+        let errorMessage = "Can not send email.";
+        if (error.response) {
+            // Lỗi từ Brevo API (có response status code)
+            const status = error.response.status;
+            const data = error.response.data;
+            errorMessage = `Error Brevo API [${status}]: ${data.message || JSON.stringify(data)}`;
+        } else if (error.request) {
+            // Lỗi mạng hoặc timeout
+            errorMessage = "Network error or can not connect to Brevo API.";
+        } else {
+            // Lỗi khác (ví dụ: lỗi trong hàm, chưa kịp gửi request)
+            errorMessage = `Server error: ${error.message}`;
+        }
+        throw new Error(errorMessage);
+    }
+}

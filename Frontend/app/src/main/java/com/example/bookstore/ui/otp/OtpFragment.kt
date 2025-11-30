@@ -21,23 +21,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.bookstore.R
+import com.example.bookstore.ui.book_detail.BookDetailViewModel
+import com.example.bookstore.ui.book_detail.BookDetailViewModelFactory
 import com.example.bookstore.ui.theme.BookstoreTheme
 
 class OtpFragment : Fragment(R.layout.fragment_otp) {
-    // 1. Nhận tham số từ Safe Args
+    // Nhận tham số từ Safe Args
     private val args: OtpFragmentArgs by navArgs()
-    private val initialEmail: String = args.email
-    private val initialType: String = args.otpType
-
-    private val viewModel: OtpViewModel by viewModels {
-        OtpViewModelFactory(requireContext(), initialEmail, initialType)
-    }
+    private lateinit var initialEmail: String
+    private lateinit var initialType: String
+    private lateinit var viewModel: OtpViewModel
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        initialEmail = args.email
+        initialType = args.otpType
+
+        viewModel = ViewModelProvider(this, OtpViewModelFactory(requireContext(), initialEmail, initialType))
+            .get(OtpViewModel::class.java)
+
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {

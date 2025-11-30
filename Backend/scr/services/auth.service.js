@@ -1,7 +1,7 @@
 import { createUser, findUser, updateUser } from "../repositories/user.repository.js"
 import { createOrUpdateOtp, findOtp, deleteOtp, checkOtpIsExpired } from "../repositories/otp.repository.js"
 import { generateAccessToken, hashStringByBcrypt, compareByBcrypt } from "../utils/auth.util.js"
-import { sendOtpByEmail } from "../utils/email.utils.js"
+import { sendOtpByEmail, sendOtpByEmailv2 } from "../utils/email.utils.js"
 import { OAuth2Client } from 'google-auth-library';
 
 export const loginWithEmail = async (email, password) => {
@@ -141,8 +141,6 @@ export const registerWithEmail = async (email, username, password) => {
 }
 
 export const verifyOtp = async (email, otp, type) => {
-    console.log(otp);
-    console.log(typeof otp);
     const otpData = await findOtp({ email, type });
 
     if (!otpData) {
@@ -194,7 +192,7 @@ export const sendOrResendOtp = async (email, type) => {
             otp_hash: await hashStringByBcrypt(otp),
             type
         });
-    await sendOtpByEmail(otp, email);
+    await sendOtpByEmailv2(otp, email);
 }
 
 export const handleBeforeResetPassword = async (email) => {

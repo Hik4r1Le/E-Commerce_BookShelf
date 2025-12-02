@@ -2,57 +2,102 @@ package com.example.bookstore.ui.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookstore.R
+import com.example.bookstore.api.cart.CartRepository
+import com.example.bookstore.model.CartItemData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class CartItem(
-    val id: Int,
-    val name: String,
-    val author: String,
-    val price: Int,
-    val imageRes: Int,
-    val quantity: Int = 1,
-    val checked: Boolean = true
-)
+class CartViewModel(private val repository: CartRepository) : ViewModel() {
 
-class CartViewModel : ViewModel() {
+    data class CartItem(
+        val id: Int,
+        val name: String,
+        val author: String,
+        val price: Int,
+        val imageRes: Int,
+        val quantity: Int = 1,
+        val checked: Boolean = true
+    )
 
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
 
     init {
-        loadSampleData()
+        loadCart()
     }
 
-    private fun loadSampleData() {
+    private fun loadCart() {
         viewModelScope.launch {
-            _cartItems.value = listOf(
-                CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
-                CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
-                CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
-                CartItem(4, "Kính Vạn Hoa", "Nguyễn Nhật Ánh", 86_000, R.drawable.book4, quantity = 3)
-            )
+            val items = repository.getCartItems().map { data ->
+                val priceInt = when (val p = data.price) {
+                    is Double -> p.toInt()
+                    is Float -> p.toInt()
+                    is Long -> p.toInt()
+                    is Int -> p
+                    else -> try {
+                        p.toString().toDouble().toInt()
+                    } catch (e: Exception) { 0 }
+                }
+
+                val qtyInt = when (val q = data.quantity) {
+                    is Double -> q.toInt()
+                    is Float -> q.toInt()
+                    is Long -> q.toInt()
+                    is Int -> q
+                    else -> try {
+                        q.toString().toDouble().toInt()
+                    } catch (e: Exception) { 1 }
+                }
+
+                CartItem(
+                    id = data.id,
+                    name = data.title,
+                    author = data.author,
+                    price = priceInt,
+                    imageRes = data.resId,
+                    quantity = qtyInt,
+                    checked = data.isChecked
+                )
+            }
+            _cartItems.value = items
         }
     }
 
-    fun toggleChecked(itemId: Int, checked: Boolean) {
-        _cartItems.update { list ->
-            list.map { if (it.id == itemId) it.copy(checked = checked) else it }
+    fun toggleChecked(id: Int, checked: Boolean) {
+        viewModelScope.launch {
+            repository.toggleChecked(id, checked)
+            _cartItems.value = _cartItems.value.map {
+                if (it.id == id) it.copy(checked = checked) else it
+            }
         }
     }
 
-    fun updateQuantity(itemId: Int, quantity: Int) {
-        if (quantity < 1) return
-        _cartItems.update { list ->
-            list.map { if (it.id == itemId) it.copy(quantity = quantity) else it }
+    fun updateQuantity(id: Int, quantity: Int) {
+        viewModelScope.launch {
+            repository.updateQuantity(id, quantity)
+            _cartItems.value = _cartItems.value.map {
+                if (it.id == id) it.copy(quantity = quantity) else it
+            }
         }
     }
 
-    fun removeItem(itemId: Int) {
-        _cartItems.update { list -> list.filterNot { it.id == itemId } }
+    fun removeItem(id: Int) {
+        viewModelScope.launch {
+            val ok = repository.removeItem(id)
+            if (ok) {
+                _cartItems.value = _cartItems.value.filter { it.id != id }
+            }
+        }
+    }
+
+    fun clearChecked() {
+        viewModelScope.launch {
+            val ok = repository.clearChecked()
+            if (ok) {
+                _cartItems.value = _cartItems.value.filter { !it.checked }
+            }
+        }
     }
 
     fun getTotalPrice(): Int =

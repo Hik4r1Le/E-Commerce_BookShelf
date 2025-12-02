@@ -1,13 +1,18 @@
 package com.example.bookstore.ui.orders
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.bookstore.R
+import com.example.bookstore.model.OrderDataSection
+import com.example.bookstore.model.OrderStatus
+import com.example.bookstore.api.order.OrderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class OrdersViewModel : ViewModel() {
+class OrdersViewModel(private val token: String) : ViewModel() {
+
+    private val repository = OrderRepository()
 
     val tabs = listOf("Chờ xác nhận", "Chờ lấy hàng", "Chờ giao hàng", "Đã giao")
 
@@ -17,36 +22,45 @@ class OrdersViewModel : ViewModel() {
     private val _totalMessages = MutableStateFlow(8)
     val totalMessages: StateFlow<Int> = _totalMessages
 
-    private val _orderSections = MutableStateFlow<List<OrderSection>>(emptyList())
-    val orderSections: StateFlow<List<OrderSection>> = _orderSections
+    private val _orderSections = MutableStateFlow<List<OrderDataSection>>(emptyList())
+    val orderSections: StateFlow<List<OrderDataSection>> = _orderSections
 
     init {
-        loadOrders()
+        loadOrdersFromApi()
     }
 
-    private fun loadOrders() {
+    private fun loadOrdersFromApi() {
         viewModelScope.launch {
-            val sampleOrders = listOf(
-                BookOrder("Muôn kiếp nhân sinh", "Nguyễn Phong", 99, 1, R.drawable.book6),
-                BookOrder("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", 69, 2, R.drawable.book7)
-            )
-
-            val sections = listOf(
-                OrderSection("Chờ xác nhận", sampleOrders, 257, "Đang xử lý"),
-                OrderSection("Chờ lấy hàng", sampleOrders, 257, "Liên hệ Shop"),
-                OrderSection("Chờ giao hàng", sampleOrders, 257, "Đã nhận hàng"),
-                OrderSection("Đã giao", sampleOrders, 257, "Mua lại")
-            )
-
-            _orderSections.value = sections
+            val orders = repository.fetchOrders(token)
+            orders?.let {
+                val sections = tabs.mapIndexed { index, _ ->
+                    val status = when (index) {
+                        0 -> OrderStatus.PENDING
+                        1 -> OrderStatus.WAIT_PICKUP
+                        2 -> OrderStatus.WAIT_DELIVERY
+                        3 -> OrderStatus.DELIVERED
+                        else -> OrderStatus.PENDING
+                    }
+                    val sectionOrders = it.filter { order -> order.status == status }
+                    OrderDataSection(
+                        status = status,
+                        orders = sectionOrders,
+                        totalPrice = sectionOrders.sumOf { order -> order.price * order.quantity },
+                        actionText = sectionOrders.firstOrNull()?.actionText ?: ""
+                    )
+                }
+                _orderSections.value = sections
+            }
         }
     }
 
-    fun onTabSelected(index: Int) {
-        _selectedTabIndex.value = index
-    }
+    fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
 
-    fun clearMessages() {
-        _totalMessages.value = 0
+    fun clearMessages() { _totalMessages.value = 0 }
+
+    class Factory(private val token: String) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return OrdersViewModel(token) as T
+        }
     }
 }

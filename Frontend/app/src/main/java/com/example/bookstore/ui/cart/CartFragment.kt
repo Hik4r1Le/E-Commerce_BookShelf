@@ -31,34 +31,68 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.bookstore.ui.theme.BookstoreTheme
 import com.example.bookstore.R
+import com.example.bookstore.api.cart.CartApi
+import com.example.bookstore.api.cart.CartRepository
+import com.example.bookstore.ui.theme.BookstoreTheme
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class CartFragment : Fragment() {
 
-    private val viewModel: CartViewModel by viewModels()
+    private val viewModel: CartViewModel by lazy {
+
+        // Tạo Retrofit (sửa lại baseURL đúng API của bạn)
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://your-api.com/") // TODO: đổi lại base url thật
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val api = retrofit.create(CartApi::class.java)
+        val repo = CartRepository(api)
+
+        ViewModelProvider(this, object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return CartViewModel(repo) as T
+            }
+        })[CartViewModel::class.java]
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = ComposeView(requireContext()).apply {
+
         setContent {
             BookstoreTheme {
+
                 val items by viewModel.cartItems.collectAsStateWithLifecycle()
                 val totalPrice = viewModel.getTotalPrice()
                 val totalItems = viewModel.getTotalItems()
 
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
                     CartScreen(
                         cartItems = items,
                         totalPrice = totalPrice,
                         totalItems = totalItems,
-                        onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() },
-                        onCheckoutClick = { /* navigate to checkout */ },
-                        onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
-                        onQuantityChange = { id, qty -> viewModel.updateQuantity(id, qty) },
-                        onDelete = { id -> viewModel.removeItem(id) }
+                        onBackClick = {
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                        },
+                        onCheckoutClick = { /* TODO: Điều hướng qua Checkout */ },
+                        onCheckedChange = { id, checked ->
+                            viewModel.toggleChecked(id, checked)
+                        },
+                        onQuantityChange = { id, qty ->
+                            viewModel.updateQuantity(id, qty)
+                        },
+                        onDelete = { id ->
+                            viewModel.removeItem(id)
+                        }
                     )
                 }
             }
@@ -66,11 +100,10 @@ class CartFragment : Fragment() {
     }
 }
 
-// Composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
-    cartItems: List<CartItem>,
+    cartItems: List<CartViewModel.CartItem>,
     totalPrice: Int,
     totalItems: Int,
     onBackClick: () -> Unit = {},
@@ -84,6 +117,7 @@ fun CartScreen(
             .fillMaxSize()
             .background(Color(0xFFFFF8F3))
     ) {
+
         // Header
         Row(
             modifier = Modifier
@@ -113,13 +147,18 @@ fun CartScreen(
                             .align(Alignment.TopEnd),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("$totalItems", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "$totalItems",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
         }
 
-        // Danh sách sản phẩm
+        // Cart items
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
@@ -136,7 +175,7 @@ fun CartScreen(
             }
         }
 
-        // Footer: Tổng cộng + Thanh toán
+        // Footer
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -149,7 +188,11 @@ fun CartScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Tổng cộng:", fontSize = 20.sp, fontWeight = FontWeight.Medium)
-                Text("${"%,d".format(totalPrice)} đ", fontSize = 20.sp, color = Color.Red)
+                Text(
+                    "${"%,d".format(totalPrice)} đ",
+                    fontSize = 20.sp,
+                    color = Color.Red
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(
@@ -160,7 +203,12 @@ fun CartScreen(
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Thanh toán", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    "Thanh toán",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
         }
     }
@@ -168,7 +216,7 @@ fun CartScreen(
 
 @Composable
 fun CartItemCard(
-    item: CartItem,
+    item: CartViewModel.CartItem,
     onCheckedChange: (Boolean) -> Unit,
     onQuantityChange: (Int) -> Unit,
     onDelete: () -> Unit
@@ -186,6 +234,7 @@ fun CartItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Checkbox(
                 checked = item.checked,
                 onCheckedChange = onCheckedChange,
@@ -204,7 +253,6 @@ fun CartItemCard(
                     .size(100.dp)
                     .clip(RoundedCornerShape(8.dp))
             )
-
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(
@@ -215,7 +263,11 @@ fun CartItemCard(
                     Text(item.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2)
                     Text(item.author, fontSize = 14.sp, color = Color.Gray, maxLines = 2)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("${"%,d".format(item.price)} đ", fontSize = 16.sp, color = Color.Red)
+                    Text(
+                        "${"%,d".format(item.price)} đ",
+                        fontSize = 16.sp,
+                        color = Color.Red
+                    )
                 }
 
                 Row(
@@ -257,10 +309,11 @@ fun CartItemCard(
 }
 
 // Previews
+
 fun previewSampleCartItems() = listOf(
-    CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
-    CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
-    CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
+    CartViewModel.CartItem(1, "Tâm Lý Học & Đời Sống", "Richard J. Gerrig & Philip G. Zimbardo", 95_000, R.drawable.book1, quantity = 1),
+    CartViewModel.CartItem(2, "Memoirs", "Kanika Sharma", 88_000, R.drawable.book2, quantity = 2),
+    CartViewModel.CartItem(3, "Đắc Nhân Tâm", "Dale Carnegie", 120_000, R.drawable.book3, quantity = 1),
 )
 
 @Preview(showBackground = true)

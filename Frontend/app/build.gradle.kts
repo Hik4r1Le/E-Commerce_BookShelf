@@ -46,23 +46,30 @@ android {
 }
 
 dependencies {
-
+    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+
+    // Lifecycle
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
+    // Navigation
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.androidx.legacy.support.v4)
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    // Jetpack Compose BOM (to manage versions consistently)
+
+    // Jetpack Compose BOM (manage versions consistently)
     implementation(platform("androidx.compose:compose-bom:2025.09.01"))
 
-// Core UI + Material 3
+    // Compose UI + Material3
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -78,13 +85,21 @@ dependencies {
 
     // Dùng để cho phép Retrofit sử dụng Gson để chuyển đổi JSON
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
 
     // Thư viện Coroutines Test cho môi trường Unit Test
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
 
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    // DataStore Preferences
+    implementation("androidx.datastore:datastore-preferences:1.1.0")
+
+    // Gson
+    implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation("com.google.android.gms:play-services-auth:21.0.0")
+    
+    // Coroutine support
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

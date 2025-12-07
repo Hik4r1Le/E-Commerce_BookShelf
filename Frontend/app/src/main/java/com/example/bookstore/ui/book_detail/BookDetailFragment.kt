@@ -42,8 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
-import com.example.bookstore.model.BookDetailData
-import com.example.bookstore.model.UserCommentData
 import com.example.bookstore.ui.theme.BookstoreTheme
 import androidx.compose.material3.Card
 import androidx.compose.runtime.mutableStateOf
@@ -85,8 +83,27 @@ class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
                     onBackClick = {
                         findNavController().popBackStack()
                     },
-                    onAddToCart = { bookId ->
+                    onAddToCart = { bookId, quantity ->
                         // Xử lý thêm vào giỏ hàng
+                        // 1. Lấy thông tin cần thiết từ ViewModel
+                        val detail = viewModel.productDetail // ProductDetailUI
+
+                        if (detail != null) {
+                            // 2. Gọi hàm AddToCart trong ViewModel
+                            viewModel.addToCart(
+                                stockId = detail.stockId, // Giả định ProductDetailUI có stockId
+                                quantity = quantity,
+                                priceAtAdd = detail.price * (1 - detail.discount), // Giá sau giảm tại thời điểm thêm
+                                onSuccess = {
+                                    // 3. Navigation sau khi gọi API thành công
+                                    findNavController().navigate(
+                                        BookDetailFragmentDirections.actionBookDetailToCart()
+                                    )
+                                }
+                            )
+                        } else {
+                            // TODO: Hiển thị Toast hoặc Snackbar thông báo lỗi
+                        }
                     }
                 )
             }
@@ -104,11 +121,12 @@ fun Double.toCurrencyString(): String {
 fun BookDetailScreen(
     viewModel: BookDetailViewModel,
     onBackClick: () -> Unit,
-    onAddToCart: (String) -> Unit
+    onAddToCart: (String, Int) -> Unit
 ) {
     val productDetail = viewModel.productDetail // Dữ liệu thật
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
+    val isAddingToCart = viewModel.isAddingToCart
 
     val quantityState = remember { mutableStateOf(1) }
     val quantity = quantityState.value
@@ -181,7 +199,8 @@ fun BookDetailScreen(
                 onDecrease = { if (quantityState.value > 1) quantityState.value-- },
                 // Tính giá: Giá gốc * (1 - discount) * số lượng
                 price = book.price * (1 - book.discount) * quantity,
-                onAddToCart = { onAddToCart(book.id) }
+                onAddToCart = { onAddToCart(book.id, quantity) },
+                isLoading= isLoading
             )
         } else {
             // Hiển thị khi không tìm thấy sản phẩm
@@ -233,7 +252,7 @@ fun BookDetailHeader(onBackClick: () -> Unit) {
 @Composable
 fun BookDetailCard(
     book: ProductDetailUI,
-    onAddToCart: (String) -> Unit
+    onAddToCart: (String, Int) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -349,7 +368,8 @@ fun FooterSection(
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
     price: Double,
-    onAddToCart: () -> Unit
+    onAddToCart: () -> Unit,
+    isLoading: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -423,17 +443,25 @@ fun FooterSection(
         }
 
         Button(
-            onClick = onAddToCart,
+            onClick = { if (!isLoading) onAddToCart() },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5ADBC)),
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = "Thêm vào giỏ hàng",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color.Black
-            )
+            if (isLoading) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = "Thêm vào giỏ hàng",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color.Black
+                )
+            }
         }
     }
 }
@@ -570,7 +598,8 @@ fun PreviewFooter(){
         onIncrease = {},
         onDecrease = {},
         price = 86000.0,
-        onAddToCart = {}
+        onAddToCart = {},
+        isLoading = false
     )
 }
 

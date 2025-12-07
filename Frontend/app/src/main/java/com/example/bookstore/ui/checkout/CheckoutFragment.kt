@@ -1,13 +1,12 @@
 package com.example.bookstore.ui.checkout
 
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,114 +20,158 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.lifecycle.lifecycleScope
 import com.example.bookstore.R
-import com.example.bookstore.model.CheckoutBook
-import com.example.bookstore.model.DeliveryOption
 import com.example.bookstore.ui.theme.BookstoreTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.*
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.ViewModelProvider
+import coil.compose.AsyncImage
+import com.example.bookstore.model.checkout.CheckoutUIModel
+import com.example.bookstore.model.checkout.CheckoutUIProductItem
+import com.example.bookstore.network.ApiService
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import androidx.compose.ui.text.style.TextAlign
 
 class CheckoutFragment : Fragment(R.layout.fragment_checkout) {
-
-    private val viewModel: CheckoutViewModel by viewModels()
+    private val args: CheckoutFragmentArgs by navArgs()
+    private lateinit var viewModel: CheckoutViewModel
+    private lateinit var cartItemIds: List<String>
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
 
+        cartItemIds = args.cartItemIds.toList()
+        viewModel = ViewModelProvider(this, CheckoutViewModelFactory(requireContext()))
+            .get(CheckoutViewModel::class.java)
+
+        if (cartItemIds.isNotEmpty()) {
+            viewModel.loadCheckoutReview(cartItemIds)
+        } else {
+            // Xử lý trường hợp không có ID nào được truyền (rất hiếm nếu từ Cart qua)
+            // viewModel.uiState.value = viewModel.uiState.value.copy(errorMessage = "Không có sản phẩm để thanh toán.") // Cần cập nhật state nếu muốn hiển thị lỗi ngay
+        }
+
         composeView.setContent {
             BookstoreTheme {
-                var books by remember { mutableStateOf(listOf<CheckoutBook>()) }
-                var isLoading by remember { mutableStateOf(false) }
-                var errorMsg by remember { mutableStateOf<String?>(null) }
+                val uiState by viewModel.uiState
+                val reviewData = uiState.reviewData
 
-                LaunchedEffect(Unit) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        viewModel.uiState.collectLatest { state ->
-                            when (state) {
-                                is CheckoutUiState.Loading -> {
-                                    isLoading = true
-                                    errorMsg = null
-                                }
-                                is CheckoutUiState.Success -> {
-                                    isLoading = false
-                                    books = state.response.books
-                                }
-                                is CheckoutUiState.Error -> {
-                                    isLoading = false
-                                    errorMsg = state.message
-                                }
-                            }
-                        }
+                val navController = findNavController()
+                LaunchedEffect(uiState.orderSuccess) {
+                    if (uiState.orderSuccess) {
+                        // Navigation sang màn hình Order và xóa màn hình Cart/Checkout khỏi backstack
+                        navController.navigate(CheckoutFragmentDirections.actionCheckoutToOrder())
+                    }
+                }
+
+                var selectedDelivery by remember {
+                    mutableStateOf(DeliveryOption.TIET_KIEM)
+                }
+
+                LaunchedEffect(reviewData?.shippingType) {
+                    reviewData?.shippingType?.let { type ->
+                        selectedDelivery = DeliveryOption.values().find {
+                            it.apiType == type
+                        } ?: DeliveryOption.TIET_KIEM
                     }
                 }
 
                 CheckoutScreen(
-                    books = books,
-                    onBackClick = { /* pop back */ },
+                    reviewData = reviewData,
+                    onBackClick = { findNavController().popBackStack() },
                     onOrder = {
-                        val token = "user_access_token_here" // TODO: lấy token thật
-                        val cartIds = books.map { it.title }
-                        viewModel.checkoutFromCart(token, cartIds)
+                        // Gọi placeOrder với các ID cần thiết
+                        if (reviewData != null) {
+                            viewModel.placeOrder(
+                                addressId = reviewData.addressId,
+                                shippingMethodId = selectedDelivery.apiId, // Lấy từ trạng thái local Delivery
+                                couponId = reviewData.couponCode
+                            )
+                        }
                     },
-                    isLoading = isLoading,
-                    errorMessage = errorMsg
+                    isLoading = uiState.isLoadingReview,
+                    isPlacingOrder = uiState.isPlacingOrder,
+                    errorMessage = uiState.errorMessage,
+                    selectedDelivery = selectedDelivery,
+                    onSelectDelivery = { selectedDelivery = it },
+                    onRetry = {
+                        if (cartItemIds.isNotEmpty()) {
+                            viewModel.loadCheckoutReview(cartItemIds)
+                        }
+                    }
                 )
             }
         }
     }
 }
 
+fun Double.toCurrencyString(): String {
+    val formatter = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
+    return formatter.format(this).replace("₫", " VNĐ").trim()
+}
+
+enum class DeliveryOption(val apiId: String, val apiType: String, val title: String, val price: Double, val time: String) {
+    NHANH("fast_id", "fast", "Giao hàng nhanh", 30000.0, "1-2 ngày"),
+    TIET_KIEM("standard_id", "standard", "Giao hàng tiết kiệm", 15000.0, "3-5 ngày")
+}
+
 // Composable
 @Composable
 fun CheckoutScreen(
-    books: List<CheckoutBook>,
+    reviewData: CheckoutUIModel?,
     onBackClick: () -> Unit,
     onOrder: () -> Unit,
-    isLoading: Boolean = false,
-    errorMessage: String? = null
+    isLoading: Boolean,
+    isPlacingOrder: Boolean,
+    errorMessage: String?,
+    selectedDelivery: DeliveryOption,
+    onSelectDelivery: (DeliveryOption) -> Unit,
+    onRetry: () -> Unit
 ) {
-    var selectedDelivery by remember { mutableStateOf(DeliveryOption.TIET_KIEM) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Header(onBackClick)
 
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            item { AddressInput() }
-            item { OrderList(books) }
-            item { Delivery(selected = selectedDelivery, onSelect = { selectedDelivery = it }) }
-        }
-
-        Footer(books = books, selectedDelivery = selectedDelivery, onOrder = onOrder)
-
         if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0x88000000)),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        }
-
-        errorMessage?.let {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Red)
-                    .padding(8.dp)
-            ) {
-                Text(text = it, color = Color.White)
+        } else if (errorMessage != null) {
+            Box(modifier = Modifier.fillMaxSize().weight(1f).padding(16.dp), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Lỗi tải thông tin: $errorMessage", color = Color.Red, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = onRetry) {
+                        Text("Thử lại")
+                    }
+                }
             }
+        } else if (reviewData != null) {
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                item { AddressDisplay(reviewData.recipientName, reviewData.phoneNumber, reviewData.fullAddress) }
+                item { OrderList(reviewData.productItems) }
+                item { Delivery(selected = selectedDelivery, onSelect = onSelectDelivery) }
+            }
+
+            Footer(
+                books = reviewData.productItems,
+                deliveryFee = selectedDelivery.price,
+                discount = reviewData.couponDiscountValue,
+                onOrder = onOrder,
+                isPlacingOrder = isPlacingOrder
+            )
         }
     }
 }
@@ -158,6 +201,28 @@ fun Header(onBackClick: () -> Unit) {
                 .align(Alignment.TopCenter)
                 .offset(y = 4.dp)
         )
+    }
+}
+
+@Composable
+fun AddressDisplay(name: String, phone: String, fullAddress: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(Color(0xFFEFEFEF), RoundedCornerShape(8.dp))
+            .padding(12.dp)
+    ) {
+        Text(
+            text = "Địa chỉ giao hàng",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text("Người nhận: $name - $phone", fontSize = 16.sp, color = Color.Black)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Địa chỉ: $fullAddress", fontSize = 14.sp, color = Color.Gray)
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
@@ -243,7 +308,9 @@ fun AddressInput() {
 }
 
 @Composable
-fun OrderCard(orderBook: CheckoutBook, modifier: Modifier = Modifier) {
+fun OrderCard(orderBook: CheckoutUIProductItem, modifier: Modifier = Modifier) {
+    val totalItemPrice = orderBook.unitPrice * orderBook.quantity
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -256,8 +323,8 @@ fun OrderCard(orderBook: CheckoutBook, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(orderBook.imageID),
+            AsyncImage(
+                model = orderBook.imageUrl,
                 contentDescription = null,
                 modifier = Modifier
                     .width(70.dp)
@@ -269,15 +336,15 @@ fun OrderCard(orderBook: CheckoutBook, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = orderBook.category, color = Color.Gray, fontSize = 14.sp)
+                Text(text = orderBook.categoryName, color = Color.Gray, fontSize = 14.sp)
                 Text(
-                    text = orderBook.title,
+                    text = orderBook.productName,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     modifier = Modifier.padding(vertical = 2.dp),
                     maxLines = 1
                 )
-                Text(text = orderBook.author, color = Color.Gray, fontSize = 14.sp)
+                Text(text = orderBook.authorName, color = Color.Gray, fontSize = 14.sp)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -287,7 +354,7 @@ fun OrderCard(orderBook: CheckoutBook, modifier: Modifier = Modifier) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Số lượng: ${orderBook.quantity}",
+                        text = "SL: ${orderBook.quantity}",
                         color = Color.Gray,
                         fontSize = 14.sp
                     )
@@ -297,7 +364,7 @@ fun OrderCard(orderBook: CheckoutBook, modifier: Modifier = Modifier) {
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = orderBook.price,
+                            text = totalItemPrice.toCurrencyString(),
                             color = Color.Black,
                             fontWeight = FontWeight.Medium,
                             fontSize = 14.sp
@@ -310,14 +377,14 @@ fun OrderCard(orderBook: CheckoutBook, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun OrderList(orderBooks: List<CheckoutBook>) {
+fun OrderList(orderBooks: List<CheckoutUIProductItem>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
         Text(
-            text = "Sản phẩm",
+            text = "Sản phẩm (${orderBooks.size})",
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -348,23 +415,30 @@ fun Delivery(selected: DeliveryOption, onSelect: (DeliveryOption) -> Unit) {
                     selected = selected == option,
                     onClick = null,
                     colors = RadioButtonDefaults.colors(
-                        selectedColor = Color.Red,
+                        selectedColor = Color(0xFFF5ADBC),
                         unselectedColor = Color.LightGray
                     )
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(option.title, fontSize = 16.sp)
                 Spacer(Modifier.weight(1f))
-                Text(text = "${option.price}đ – ${option.time}", color = Color.Gray, fontSize = 14.sp)
+                Text(text = option.price.toCurrencyString(), color = Color.Gray, fontSize = 14.sp)
             }
         }
     }
 }
 
 @Composable
-fun Footer(books: List<CheckoutBook>, selectedDelivery: DeliveryOption, onOrder: () -> Unit) {
-    val total = calculateTotal(books, selectedDelivery.price)
-    val formattedTotal = NumberFormat.getInstance(Locale("vi", "VN")).format(total)
+fun Footer(
+    books: List<CheckoutUIProductItem>,
+    deliveryFee: Double,
+    discount: Double,
+    onOrder: () -> Unit,
+    isPlacingOrder: Boolean
+) {
+    val subtotal = books.sumOf { it.unitPrice * it.quantity }
+    val totalDiscount = discount
+    val finalTotal = subtotal + deliveryFee - totalDiscount
 
     Column(
         modifier = Modifier
@@ -372,77 +446,115 @@ fun Footer(books: List<CheckoutBook>, selectedDelivery: DeliveryOption, onOrder:
             .background(Color.White)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Text("Tổng:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        // Chi tiết tổng tiền
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text("Tổng tiền hàng:", fontSize = 14.sp, color = Color.Gray)
+            Text(subtotal.toCurrencyString(), fontSize = 14.sp, color = Color.Gray)
+        }
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text("Phí vận chuyển:", fontSize = 14.sp, color = Color.Gray)
+            Text(deliveryFee.toCurrencyString(), fontSize = 14.sp, color = Color.Gray)
+        }
+        if (totalDiscount > 0) {
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text("Giảm giá Coupon:", fontSize = 14.sp, color = Color.Red)
+                Text("- ${totalDiscount.toCurrencyString()}", fontSize = 14.sp, color = Color.Red)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Divider()
+        Spacer(Modifier.height(8.dp))
+
+        // Tổng thanh toán cuối cùng
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text("${formattedTotal}đ", color = Color.Green, fontWeight = FontWeight.Bold, fontSize = 32.sp)
-            Spacer(Modifier.weight(0.5f))
-            Button(
-                onClick = onOrder,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5ADBC)),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.height(56.dp)
-            ) {
-                Text("Đặt hàng", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 32.sp)
+            Text("Tổng thanh toán:", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(Modifier.weight(1f))
+            Text(
+                finalTotal.toCurrencyString(),
+                color = Color(0xFFF5ADBC),
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+
+        Button(
+            onClick = onOrder,
+            enabled = finalTotal > 0 && !isPlacingOrder,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5ADBC)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            if (isPlacingOrder) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text(
+                    "ĐẶT HÀNG",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
             }
         }
     }
 }
 
-fun calculateTotal(books: List<CheckoutBook>, deliveryPrice: Int): Int {
-    val booksTotal = books.sumOf { (it.price.replace(".", "").toIntOrNull() ?: 0) * it.quantity }
-    return booksTotal + deliveryPrice
-}
-
-// Previews
-@Preview
-@Composable
-fun HeaderPreview() { BookstoreTheme { Header { } } }
-
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Composable
-fun AddressPreview() { BookstoreTheme { AddressInput() } }
-
-@Preview(showBackground = true)
-@Composable
-fun OrderCardPreview() {
-    val sample = CheckoutBook(R.drawable.book1, "Sách Truyền cảm hứng", "Muôn kiếp nhân sinh", "Nguyễn Phong", "99.000đ", 1)
-    BookstoreTheme { Surface { OrderCard(sample) } }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun OrderListPreview() {
-    val sampleList = listOf(
-        CheckoutBook(R.drawable.book1, "Sách Truyền cảm hứng", "Muôn kiếp nhân sinh", "Nguyễn Phong", "99.000đ", 1),
-        CheckoutBook(R.drawable.book2, "Sách Thiếu nhi", "Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", 2)
-    )
-    BookstoreTheme { Surface { OrderList(sampleList) } }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DeliveryPreview() {
-    BookstoreTheme {
-        var selected by remember { mutableStateOf(DeliveryOption.TIET_KIEM) }
-        Delivery(selected = selected, onSelect = { selected = it })
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FooterPreview() {
-    val sampleBooks = listOf(
-        CheckoutBook(0, "Sách", "Lập trình Kotlin", "John Doe", "70000", 2)
-    )
-    BookstoreTheme { Footer(sampleBooks, DeliveryOption.TIET_KIEM, onOrder = {}) }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CheckoutScreenPreview() {
-    val testBooks = listOf(
-        CheckoutBook(R.drawable.book4, "Sách", "Lập trình Kotlin", "John Doe", "150000", 2),
-        CheckoutBook(R.drawable.book3, "Truyện", "Harry Potter", "J.K. Rowling", "140000", 1)
-    )
-    BookstoreTheme { CheckoutScreen(testBooks, {}, {}, false) }
-}
+//fun calculateTotal(books: List<CheckoutBook>, deliveryPrice: Int): Int {
+//    val booksTotal = books.sumOf { (it.price.replace(".", "").toIntOrNull() ?: 0) * it.quantity }
+//    return booksTotal + deliveryPrice
+//}
+//
+//// Previews
+//@Preview
+//@Composable
+//fun HeaderPreview() { BookstoreTheme { Header { } } }
+//
+//@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+//@Composable
+//fun AddressPreview() { BookstoreTheme { AddressInput() } }
+//
+//@Preview(showBackground = true)
+//@Composable
+//fun OrderCardPreview() {
+//    val sample = CheckoutBook(R.drawable.book1, "Sách Truyền cảm hứng", "Muôn kiếp nhân sinh", "Nguyễn Phong", "99.000đ", 1)
+//    BookstoreTheme { Surface { OrderCard(sample) } }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//fun OrderListPreview() {
+//    val sampleList = listOf(
+//        CheckoutBook(R.drawable.book1, "Sách Truyền cảm hứng", "Muôn kiếp nhân sinh", "Nguyễn Phong", "99.000đ", 1),
+//        CheckoutBook(R.drawable.book2, "Sách Thiếu nhi", "Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", 2)
+//    )
+//    BookstoreTheme { Surface { OrderList(sampleList) } }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//fun DeliveryPreview() {
+//    BookstoreTheme {
+//        var selected by remember { mutableStateOf(DeliveryOption.TIET_KIEM) }
+//        Delivery(selected = selected, onSelect = { selected = it })
+//    }
+//}
+//
+//@Preview(showBackground = true)
+//@Composable
+//fun FooterPreview() {
+//    val sampleBooks = listOf(
+//        CheckoutBook(0, "Sách", "Lập trình Kotlin", "John Doe", "70000", 2)
+//    )
+//    BookstoreTheme { Footer(sampleBooks, DeliveryOption.TIET_KIEM, onOrder = {}) }
+//}
+//
+//@Preview(showBackground = true, showSystemUi = true)
+//@Composable
+//fun CheckoutScreenPreview() {
+//    val testBooks = listOf(
+//        CheckoutBook(R.drawable.book4, "Sách", "Lập trình Kotlin", "John Doe", "150000", 2),
+//        CheckoutBook(R.drawable.book3, "Truyện", "Harry Potter", "J.K. Rowling", "140000", 1)
+//    )
+//    BookstoreTheme { CheckoutScreen(testBooks, {}, {}, false) }
+//}

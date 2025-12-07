@@ -11,6 +11,7 @@ data class ProductDetailUI(
     val imageUrl: String,
     val ratingAvg: Double,
     val ratingCount: Int,
+    val stockId: String,
     val stockQuantity: Int,
     val sellerName: String,
     val comments: List<ProductCommentUI>
@@ -48,6 +49,7 @@ fun ProductDetailResponse.toUIModel(): ProductDetailUI? {
         imageUrl = product.imageUrl ?: "",
         ratingAvg = product.ratingAvg ?: 0.0,
         ratingCount = product.ratingCount ?: 0,
+        stockId = product.stock?.id ?: "",
         stockQuantity = product.stock?.quantity ?: 0,
         sellerName = product.seller?.profile?.fullname ?: "Không rõ người bán",
         comments = comments

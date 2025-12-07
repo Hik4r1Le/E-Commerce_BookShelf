@@ -1,17 +1,17 @@
 package com.example.bookstore.repository
 
-import com.example.bookstore.model.products.HomeProductResponse
-import com.example.bookstore.model.products.ProductDetailResponse
-
+import com.example.bookstore.model.order.CreateOrderRequest
+import com.example.bookstore.model.order.OrderResponse
 import com.example.bookstore.network.ApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Response
 import org.json.JSONObject
 
-class ProductRepository(
+class OrderRepository(
     private val apiService: ApiService
 ) {
+    // Hàm hỗ trợ trích xuất thông báo lỗi từ Response không thành công
     private fun getErrorMessage(response: Response<*>): String {
         return try {
             val errorBody = response.errorBody()?.string()
@@ -26,13 +26,13 @@ class ProductRepository(
         }
     }
 
-    suspend fun getHomeProducts(): Result<HomeProductResponse> {
+    // API Tạo order sau khi checkout
+    suspend fun createOrder(request: CreateOrderRequest): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getHomeProducts()
+                val response = apiService.createOrder(request)
                 if (response.isSuccessful) {
-                    response.body()?.let { Result.success(it) }
-                        ?: Result.failure(Exception("Response body is empty"))
+                    Result.success(Unit)
                 } else {
                     Result.failure(Exception(getErrorMessage(response)))
                 }
@@ -42,10 +42,11 @@ class ProductRepository(
         }
     }
 
-    suspend fun getProductDetail(productId: String): Result<ProductDetailResponse> {
+    // API Xem các đơn hàng
+    suspend fun getOrders(): Result<OrderResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getProductDetail(productId)
+                val response = apiService.getOrders()
                 if (response.isSuccessful) {
                     response.body()?.let { Result.success(it) }
                         ?: Result.failure(Exception("Response body is empty"))

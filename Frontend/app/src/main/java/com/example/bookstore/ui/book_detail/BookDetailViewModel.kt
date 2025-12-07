@@ -7,12 +7,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
+import com.example.bookstore.repository.CartRepository
+import com.example.bookstore.model.cart.AddToCartRequest
 import com.example.bookstore.repository.ProductRepository
 import com.example.bookstore.model.products.ProductDetailUI
 import com.example.bookstore.model.products.toUIModel
 
 class BookDetailViewModel(
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val cartRepository: CartRepository
 ) : ViewModel() {
     var isLoading by mutableStateOf(false)
         private set
@@ -21,6 +24,9 @@ class BookDetailViewModel(
 
     // Lưu trữ dữ liệu chi tiết sản phẩm
     var productDetail by mutableStateOf<ProductDetailUI?>(null)
+        private set
+
+    var isAddingToCart by mutableStateOf(false)
         private set
 
     // Hàm gọi API lấy chi tiết sản phẩm
@@ -40,6 +46,35 @@ class BookDetailViewModel(
                 productDetail = null
             }
 
+            isLoading = false
+        }
+    }
+
+    fun addToCart(stockId: String, quantity: Int, priceAtAdd: Double, onSuccess: () -> Unit) {
+        if (isAddingToCart) return
+
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            isAddingToCart = true
+
+            val request = AddToCartRequest(
+                stockId = stockId,
+                quantity = quantity,
+                priceAtAdd = priceAtAdd
+            )
+
+            val result = cartRepository.addToCart(request)
+
+            result.onSuccess {
+                // Xử lý thành công
+                onSuccess()
+            }.onFailure { e ->
+                // Xử lý thất bại
+                errorMessage = e.message
+            }
+
+            isAddingToCart = false
             isLoading = false
         }
     }

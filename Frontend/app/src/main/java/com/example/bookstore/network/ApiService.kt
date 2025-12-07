@@ -11,6 +11,14 @@ import com.example.bookstore.model.otp.VerifyOtpRequest
 import com.example.bookstore.model.otp.VerifyOtpResponse
 import com.example.bookstore.model.products.HomeProductResponse
 import com.example.bookstore.model.products.ProductDetailResponse
+import com.example.bookstore.model.cart.CartDetailResponse
+import com.example.bookstore.model.cart.AddToCartRequest
+import com.example.bookstore.model.cart.UpdateCartItemRequest
+
+import com.example.bookstore.model.checkout.CheckoutReviewRequest
+import com.example.bookstore.model.checkout.CheckoutReviewResponse
+import com.example.bookstore.model.order.CreateOrderRequest
+import com.example.bookstore.model.order.OrderResponse
 
 import retrofit2.Response
 import retrofit2.http.Body
@@ -48,4 +56,43 @@ interface ApiService {
     // Product detail API
     @GET("/api/v1/products/{id}")
     suspend fun getProductDetail(@Path("id") productId: String): Response<ProductDetailResponse>
+
+    // ------------------ CART APIs ------------------
+
+    // API Xem chi tiết các sản phẩm trong giỏ hàng
+    @GET("/api/v1/cart/details")
+    suspend fun getCartDetails(): Response<CartDetailResponse>
+
+    // API Thêm một sản phẩm vào giỏ hàng
+    @POST("/api/v1/cart/details")
+    suspend fun addToCart(@Body item: AddToCartRequest): Response<Unit>
+
+    // API Cập nhập số lượng sản phẩm của 1 cart item
+    @PATCH("/api/v1/cart/details/{id}")
+    suspend fun updateCartItem(
+        @Path("id") cartItemId: String,
+        @Body updateInfo: UpdateCartItemRequest
+    ): Response<Unit>
+
+    // API Xóa một cart item
+    @DELETE("/api/v1/cart/details/{id}")
+    suspend fun deleteCartItem(@Path("id") cartItemId: String): Response<Unit>
+
+    // API Xóa tất cả cart item
+    @DELETE("/api/v1/cart/clear")
+    suspend fun clearCart(): Response<Unit>
+
+    // ------------------ CHECKOUT & ORDER APIs ------------------
+
+    // API khi vào checkout
+    @POST("/api/v1/checkout/review")
+    suspend fun checkoutReview(@Body request: CheckoutReviewRequest): Response<CheckoutReviewResponse>
+
+    // API Tạo order sau khi checkout
+    @POST("/api/v1/order")
+    suspend fun createOrder(@Body request: CreateOrderRequest): Response<Unit>
+
+    // API Xem các đơn hàng
+    @GET("/api/v1/order")
+    suspend fun getOrders(): Response<OrderResponse>
 }

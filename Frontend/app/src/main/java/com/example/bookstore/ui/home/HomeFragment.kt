@@ -38,8 +38,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.example.bookstore.R
-import com.example.bookstore.model.UI_HomeBestSeller
-import com.example.bookstore.model.UI_HomeRecommend
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -50,8 +48,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import androidx.navigation.fragment.findNavController
-import com.example.bookstore.data.UI_HomeBestSeller_data
-import com.example.bookstore.data.UI_HomeRecommend_data
 import com.example.bookstore.ui.theme.BookstoreTheme
 import androidx.fragment.app.viewModels
 import androidx.compose.runtime.LaunchedEffect

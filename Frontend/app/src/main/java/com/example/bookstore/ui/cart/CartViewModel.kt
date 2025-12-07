@@ -2,107 +2,150 @@ package com.example.bookstore.ui.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookstore.api.cart.CartRepository
-import com.example.bookstore.model.CartItemData
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
+
+import com.example.bookstore.model.cart.CartUIModel
+import com.example.bookstore.model.cart.UpdateCartItemRequest
+import com.example.bookstore.model.cart.toUIModel
+import com.example.bookstore.repository.CartRepository
+
+
+// Định nghĩa CartUiState để gom nhóm toàn bộ trạng thái
+data class CartUiState(
+    // Sử dụng CartUIModel đã được cập nhật
+    val cartItems: List<CartUIModel> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)
 
 class CartViewModel(private val repository: CartRepository) : ViewModel() {
 
-    data class CartItem(
-        val id: Int,
-        val name: String,
-        val author: String,
-        val price: Int,
-        val imageRes: Int,
-        val quantity: Int = 1,
-        val checked: Boolean = true
-    )
+    // Sử dụng Compose MutableState để quản lý trạng thái
+    private val _uiState = mutableStateOf(CartUiState())
+    val uiState: State<CartUiState> = _uiState
 
-    private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
-    val cartItems: StateFlow<List<CartItem>> = _cartItems
+    // --- HÀM HỖ TRỢ CẬP NHẬT TRẠNG THÁI ---
 
-    init {
-        loadCart()
+    private fun updateUiState(newState: CartUiState) {
+        _uiState.value = newState
     }
 
-    private fun loadCart() {
+    private fun updateCartItems(newItems: List<CartUIModel>) {
+        _uiState.value = _uiState.value.copy(cartItems = newItems, errorMessage = null)
+    }
+
+    private fun updateError(message: String?) {
+        _uiState.value = _uiState.value.copy(errorMessage = message, isLoading = false)
+    }
+
+    // --- CHỨC NĂNG CƠ BẢN ---
+
+    // API: Xem chi tiết các sản phẩm trong giỏ hàng
+    fun loadCartDetails() {
         viewModelScope.launch {
-            val items = repository.getCartItems().map { data ->
-                val priceInt = when (val p = data.price) {
-                    is Double -> p.toInt()
-                    is Float -> p.toInt()
-                    is Long -> p.toInt()
-                    is Int -> p
-                    else -> try {
-                        p.toString().toDouble().toInt()
-                    } catch (e: Exception) { 0 }
+            updateUiState(_uiState.value.copy(isLoading = true, errorMessage = null))
+
+            val result = repository.getCartDetails()
+
+            result.onSuccess { response ->
+                // Ánh xạ từ CartItemDetail (API) sang CartUIModel (UI)
+                val newItems = response.data.map { it.toUIModel() }
+
+                updateUiState(_uiState.value.copy(cartItems = newItems))
+            }.onFailure { e ->
+                updateError(e.message)
+                updateCartItems(emptyList())
+            }
+
+            updateUiState(_uiState.value.copy(isLoading = false))
+        }
+    }
+
+    // Chức năng: Toggle trạng thái chọn/bỏ chọn local
+    fun toggleChecked(cartItemId: String, checked: Boolean) {
+        val currentItems = _uiState.value.cartItems
+        val newItems = currentItems.map {
+            // Sử dụng copy để tạo CartUIModel mới với trạng thái checked đã đổi
+            if (it.cartItemId == cartItemId) it.copy(checked = checked) else it
+        }
+        updateCartItems(newItems)
+    }
+
+    // API: Cập nhật số lượng sản phẩm của 1 cart item
+    fun updateQuantity(cartItemId: String, newQuantity: Int) {
+        if (newQuantity <= 0) {
+            removeItem(cartItemId)
+            return
+        }
+
+        viewModelScope.launch {
+            val currentItem = _uiState.value.cartItems.find { it.cartItemId == cartItemId }
+            if (currentItem == null) return@launch
+
+            // Chuẩn bị Request Body
+            val updateInfo = UpdateCartItemRequest(
+                quantity = newQuantity,
+                priceAtAdd = currentItem.priceAtAdd
+            )
+
+            val result = repository.updateCartItem(cartItemId, updateInfo)
+
+            result.onSuccess {
+                // Cập nhật local state nếu API thành công
+                val newItems = _uiState.value.cartItems.map {
+                    if (it.cartItemId == cartItemId) it.copy(quantity = newQuantity) else it
                 }
-
-                val qtyInt = when (val q = data.quantity) {
-                    is Double -> q.toInt()
-                    is Float -> q.toInt()
-                    is Long -> q.toInt()
-                    is Int -> q
-                    else -> try {
-                        q.toString().toDouble().toInt()
-                    } catch (e: Exception) { 1 }
-                }
-
-                CartItem(
-                    id = data.id,
-                    name = data.title,
-                    author = data.author,
-                    price = priceInt,
-                    imageRes = data.resId,
-                    quantity = qtyInt,
-                    checked = data.isChecked
-                )
+                updateCartItems(newItems)
+            }.onFailure { e ->
+                updateError(e.message)
             }
-            _cartItems.value = items
         }
     }
 
-    fun toggleChecked(id: Int, checked: Boolean) {
+    // API: Xóa một cart item
+    fun removeItem(cartItemId: String) {
         viewModelScope.launch {
-            repository.toggleChecked(id, checked)
-            _cartItems.value = _cartItems.value.map {
-                if (it.id == id) it.copy(checked = checked) else it
+            val result = repository.deleteCartItem(cartItemId)
+
+            result.onSuccess {
+                val newItems = _uiState.value.cartItems.filter { it.cartItemId != cartItemId }
+                updateCartItems(newItems)
+            }.onFailure { e ->
+                updateError(e.message)
             }
         }
     }
 
-    fun updateQuantity(id: Int, quantity: Int) {
+    // API: Xóa tất cả cart item
+    fun clearAllCart() {
         viewModelScope.launch {
-            repository.updateQuantity(id, quantity)
-            _cartItems.value = _cartItems.value.map {
-                if (it.id == id) it.copy(quantity = quantity) else it
+            val result = repository.clearCart()
+
+            result.onSuccess {
+                updateCartItems(emptyList())
+            }.onFailure { e ->
+                updateError(e.message)
             }
         }
     }
 
-    fun removeItem(id: Int) {
-        viewModelScope.launch {
-            val ok = repository.removeItem(id)
-            if (ok) {
-                _cartItems.value = _cartItems.value.filter { it.id != id }
-            }
-        }
+    // Logic: Tính tổng tiền các sản phẩm ĐÃ CHỌN (giá sau giảm)
+    fun getTotalPrice(): Double {
+        return _uiState.value.cartItems
+            .filter { it.checked }
+            .sumOf { (it.price * (1.0 - it.discount / 100.0)) * it.quantity }
     }
 
-    fun clearChecked() {
-        viewModelScope.launch {
-            val ok = repository.clearChecked()
-            if (ok) {
-                _cartItems.value = _cartItems.value.filter { !it.checked }
-            }
-        }
-    }
-
-    fun getTotalPrice(): Int =
-        _cartItems.value.filter { it.checked }.sumOf { it.price * it.quantity }
-
+    // Logic: Tính tổng số lượng sản phẩm ĐÃ CHỌN
     fun getTotalItems(): Int =
-        _cartItems.value.filter { it.checked }.sumOf { it.quantity }
+        _uiState.value.cartItems.filter { it.checked }.sumOf { it.quantity }
+
+    fun getCheckedCartItemIds(): Array<String> {
+        return _uiState.value.cartItems
+            .filter { it.checked }
+            .map { it.cartItemId }
+            .toTypedArray()
+    }
 }

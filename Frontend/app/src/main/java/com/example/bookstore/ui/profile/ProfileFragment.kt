@@ -7,11 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import com.example.bookstore.databinding.FragmentHomeBinding
-import com.example.bookstore.databinding.FragmentOrdersBinding
 import com.example.bookstore.databinding.FragmentProfileBinding
-import com.example.bookstore.ui.home.HomeViewModel
-import com.example.bookstore.ui.orders.OrdersViewModel
 
 class ProfileFragment : Fragment() {
 

@@ -22,14 +22,38 @@
         android:id="@+id/navigation_cart"
         android:name="com.example.bookstore.ui.cart.CartFragment"
         android:label="@string/title_cart"
-        tools:layout="@layout/fragment_cart" />
+        tools:layout="@layout/fragment_cart" >
+
+        <action
+            android:id="@+id/action_cart_to_checkout"
+            app:destination="@id/navigation_checkout" />
+    </fragment>
+
+    <!--  Navigation Checkout UI  -->
+    <fragment
+        android:id="@+id/navigation_checkout"
+        android:name="com.example.bookstore.ui.checkout.CheckoutFragment"
+        android:label="Checkout"
+        tools:layout="@layout/fragment_checkout" >
+
+        <argument
+            android:name="cartItemIds"
+            app:argType="string[]" />
+
+        <action
+            android:id="@+id/action_checkout_to_order"
+            app:destination="@id/navigation_order"
+            app:popUpTo="@id/navigation_cart"
+            app:popUpToInclusive="true" />
+    </fragment>
+
 
     <!--  Navigation Order UI  -->
     <fragment
-        android:id="@+id/navigation_orders"
-        android:name="com.example.bookstore.ui.orders.OrdersFragment"
+        android:id="@+id/navigation_order"
+        android:name="com.example.bookstore.ui.order.OrderFragment"
         android:label="@string/title_orders"
-        tools:layout="@layout/fragment_orders" />
+        tools:layout="@layout/fragment_order" />
 
     <!--  Navigation User Profile UI  -->
     <fragment
@@ -49,6 +73,12 @@
             android:name="productId"
             app:argType="string"
             android:defaultValue="default_book_id" />
+
+        <action
+            android:id="@+id/action_bookDetail_to_cart"
+            app:destination="@id/navigation_cart"
+            app:popUpTo="@id/navigation_book_detail"
+            app:popUpToInclusive="false" />
 
     </fragment>
 

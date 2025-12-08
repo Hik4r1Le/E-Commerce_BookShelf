@@ -9,6 +9,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,13 +27,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.fragment.findNavController
 import com.example.bookstore.R
+import com.example.bookstore.model.RegisterCredentials
+import com.example.bookstore.model.RegisterUiState
 import com.example.bookstore.ui.theme.BookstoreTheme
 
 class RegisterFragment : Fragment(R.layout.fragment_register) {
@@ -42,27 +46,28 @@ class RegisterFragment : Fragment(R.layout.fragment_register) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                 RegisterScreen(
-                    uiState = viewModel.uiState.collectAsState().value,
+                    uiState = uiState,
                     onRegister = { credentials ->
                         viewModel.updateCredentials(credentials)
                         viewModel.register {
-                            // TODO: navigate next
+                            findNavController().popBackStack()
                         }
                     },
-                    onLoginClick = {}
+                    onLoginClick = { findNavController().popBackStack() }
                 )
             }
         }
     }
 }
 
-// Composables
+// Composable RegisterScreen
 @Composable
 fun RegisterScreen(
-    onLoginClick: () -> Unit = {},
+    uiState: RegisterUiState,
     onRegister: (RegisterCredentials) -> Unit = {},
-    uiState: RegisterUiState
+    onLoginClick: () -> Unit = {}
 ) {
     var credentials by remember { mutableStateOf(RegisterCredentials()) }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -70,7 +75,6 @@ fun RegisterScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         RegisterHeader(onLoginClick = onLoginClick)
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -93,6 +97,7 @@ fun RegisterScreen(
     }
 }
 
+// Header
 @Composable
 fun RegisterHeader(onLoginClick: () -> Unit = {}) {
     Box(
@@ -112,10 +117,16 @@ fun RegisterHeader(onLoginClick: () -> Unit = {}) {
             text = "Đăng nhập",
             color = Color.White,
             fontSize = 16.sp,
-            modifier = Modifier.align(Alignment.TopEnd).clickable { onLoginClick() }
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .clickable { onLoginClick() }
         )
+
         Row(modifier = Modifier.padding(top = 48.dp)) {
-            Column(modifier = Modifier.weight(3f), verticalArrangement = Arrangement.Top) {
+            Column(
+                modifier = Modifier.weight(3f),
+                verticalArrangement = Arrangement.Top
+            ) {
                 Text(
                     text = "Đăng ký",
                     color = Color.White,
@@ -128,16 +139,21 @@ fun RegisterHeader(onLoginClick: () -> Unit = {}) {
                     fontSize = 14.sp
                 )
             }
+
             Icon(
                 painter = painterResource(id = R.drawable.app_icon),
                 contentDescription = "Logo",
                 tint = Color(0xFFFFB300),
-                modifier = Modifier.padding(top = 8.dp, end = 8.dp).size(96.dp).weight(1f)
+                modifier = Modifier
+                    .padding(top = 8.dp, end = 8.dp)
+                    .size(96.dp)
+                    .weight(1f)
             )
         }
     }
 }
 
+// Form
 @Composable
 fun RegisterForm(
     credentials: RegisterCredentials,
@@ -162,7 +178,9 @@ fun RegisterForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = credentials.fullname,
             onValueChange = { onValueChange(credentials.copy(fullname = it)) },
@@ -170,7 +188,9 @@ fun RegisterForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = credentials.email,
             onValueChange = { onValueChange(credentials.copy(email = it)) },
@@ -179,7 +199,9 @@ fun RegisterForm(
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = credentials.password,
             onValueChange = { onValueChange(credentials.copy(password = it)) },
@@ -193,7 +215,9 @@ fun RegisterForm(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = credentials.confirmPassword,
             onValueChange = { onValueChange(credentials.copy(confirmPassword = it)) },
@@ -207,11 +231,15 @@ fun RegisterForm(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
+
         Spacer(modifier = Modifier.height(24.dp))
+
         Button(
             onClick = onRegister,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF48FB1)),
-            modifier = Modifier.fillMaxWidth().height(48.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
         ) {
             Text("Đăng ký", fontWeight = FontWeight.Bold, color = Color.White)
         }
@@ -222,12 +250,17 @@ fun RegisterForm(
         }
 
         uiState.errorMessage?.let {
-            Text(text = it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                text = it,
+                color = Color.Red,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
         Text(
-            text = "Bằng việc đăng nhập/ đăng ký, bạn đồng ý với Điều khoản và Chính sách bảo mật của chúng tôi",
+            text = "Bằng việc đăng nhập/đăng ký, bạn đồng ý với Điều khoản và Chính sách bảo mật của chúng tôi",
             color = Color.Gray,
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
@@ -247,38 +280,27 @@ fun PreviewRegisterHeader() {
 @Composable
 fun PreviewRegisterForm() {
     BookstoreTheme {
-        val credentials = remember { mutableStateOf(RegisterCredentials()) }
-        val passwordVisible = remember { mutableStateOf(false) }
-        val confirmPasswordVisible = remember { mutableStateOf(false) }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-        ) {
-            RegisterForm(
-                credentials = credentials.value,
-                onValueChange = { credentials.value = it },
-                passwordVisible = passwordVisible.value,
-                onPasswordToggle = { passwordVisible.value = !passwordVisible.value },
-                confirmPasswordVisible = confirmPasswordVisible.value,
-                onConfirmPasswordToggle = { confirmPasswordVisible.value = !confirmPasswordVisible.value },
-                onRegister = {},
-                uiState = RegisterUiState()
-            )
-        }
+        RegisterForm(
+            credentials = RegisterCredentials(),
+            onValueChange = {},
+            passwordVisible = false,
+            onPasswordToggle = {},
+            confirmPasswordVisible = false,
+            onConfirmPasswordToggle = {},
+            onRegister = {},
+            uiState = RegisterUiState()
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun PreviewRegisterScreen() {
-    val fakeUiState = RegisterUiState(isLoading = false)
     BookstoreTheme {
         RegisterScreen(
-            onLoginClick = {},
+            uiState = RegisterUiState(),
             onRegister = {},
-            uiState = fakeUiState
+            onLoginClick = {}
         )
     }
 }

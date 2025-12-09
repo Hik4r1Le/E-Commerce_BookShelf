@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +62,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.ViewModelProvider
 
+
 class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
     private val args: BookDetailFragmentArgs by navArgs()
     private lateinit var viewModel: BookDetailViewModel
@@ -66,7 +70,6 @@ class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         productId = args.productId
 
         viewModel = ViewModelProvider(this, BookDetailViewModelFactory(requireContext()))
@@ -78,34 +81,40 @@ class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
-                BookDetailScreen(
-                    viewModel = viewModel,
-                    onBackClick = {
-                        findNavController().popBackStack()
-                    },
-                    onAddToCart = { bookId, quantity ->
-                        // Xử lý thêm vào giỏ hàng
-                        // 1. Lấy thông tin cần thiết từ ViewModel
-                        val detail = viewModel.productDetail // ProductDetailUI
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()  // ★★ Fix for top spacing + status bar issue
+                ) {
+                    BookDetailScreen(
+                        viewModel = viewModel,
+                        onBackClick = {
+                            findNavController().popBackStack()
+                        },
+                        onAddToCart = { bookId, quantity ->
+                            // Xử lý thêm vào giỏ hàng
+                            // 1. Lấy thông tin cần thiết từ ViewModel
+                            val detail = viewModel.productDetail // ProductDetailUI
 
-                        if (detail != null) {
-                            // 2. Gọi hàm AddToCart trong ViewModel
-                            viewModel.addToCart(
-                                stockId = detail.stockId, // Giả định ProductDetailUI có stockId
-                                quantity = quantity,
-                                priceAtAdd = detail.price * (1 - detail.discount), // Giá sau giảm tại thời điểm thêm
-                                onSuccess = {
-                                    // 3. Navigation sau khi gọi API thành công
-                                    findNavController().navigate(
-                                        BookDetailFragmentDirections.actionBookDetailToCart()
-                                    )
-                                }
-                            )
-                        } else {
-                            // TODO: Hiển thị Toast hoặc Snackbar thông báo lỗi
+                            if (detail != null) {
+                                // 2. Gọi hàm AddToCart trong ViewModel
+                                viewModel.addToCart(
+                                    stockId = detail.stockId, // Giả định ProductDetailUI có stockId
+                                    quantity = quantity,
+                                    priceAtAdd = detail.price * (1 - detail.discount), // Giá sau giảm tại thời điểm thêm
+                                    onSuccess = {
+                                        // 3. Navigation sau khi gọi API thành công
+                                        findNavController().navigate(
+                                            BookDetailFragmentDirections.actionBookDetailToCart()
+                                        )
+                                    }
+                                )
+                            } else {
+                                // TODO: Hiển thị Toast hoặc Snackbar thông báo lỗi
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -138,7 +147,6 @@ fun BookDetailScreen(
     ) {
         // Header (top bar)
         BookDetailHeader(onBackClick = onBackClick)
-
         if (isLoading) {
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -214,6 +222,7 @@ fun BookDetailHeader(onBackClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .height(56.dp)
             .background(Color(0xFFB0AEE0))
             .padding(horizontal = 12.dp),
@@ -369,13 +378,15 @@ fun FooterSection(
     onDecrease: () -> Unit,
     price: Double,
     onAddToCart: () -> Unit,
-    isLoading: Boolean
+    isLoading: Boolean,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
             .padding(horizontal = 12.dp, vertical = 8.dp)
+            .navigationBarsPadding()
+            .padding(bottom = 100.dp)
     ) {
         Row(
             modifier = Modifier
@@ -613,40 +624,3 @@ fun PreviewComment() {
     )
 }
 
-//@Preview(
-//    showBackground = true,
-//    uiMode = Configuration.UI_MODE_NIGHT_NO
-//)
-//@Composable
-//fun PreviewBookDetailScreen() {
-//    val sampleBook = BookDetailData(
-//        id = 1,
-//        title = "Cánh đồng bất tận",
-//        author = "Nguyễn Ngọc Tư",
-//        category = "Văn học",
-//        imageRes = R.drawable.book5,
-//        description = """
-//            Cánh Đồng Bất Tận đưa người đọc vào đời sống giản dị, đầy chất thơ của miền Tây sông nước,
-//            khắc họa cô đơn, tình yêu và hy vọng qua những mảnh đời mộc mạc.
-//
-//            Phù hợp với: Người yêu văn học miền Tây, thích những câu chuyện tinh tế, giàu nhân văn.
-//        """.trimIndent(),
-//        price = 86000.0,
-//        star = 4.5f
-//    )
-//
-//    val sampleComments = listOf(
-//        UserCommentData("hik4r1le", 5f, "Sách đỉnh vcl"),
-//        UserCommentData("BaoTram161", 3.5f, "Ok"),
-//        UserCommentData("ngquocvuong23", 2f, "vl cai deo gi day")
-//    )
-//
-//    BookstoreTheme {
-//        BookDetailScreen(
-//            book = sampleBook,
-//            comments = sampleComments,
-//            onBackClick = {},
-//            onAddToCart = {}
-//        )
-//    }
-//}

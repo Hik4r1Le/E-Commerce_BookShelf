@@ -221,6 +221,8 @@ fun CartScreen(
                 .fillMaxWidth()
                 .background(Color(0xFFFFF8F3))
                 .padding(12.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 100.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

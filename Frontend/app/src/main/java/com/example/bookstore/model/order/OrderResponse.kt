@@ -43,7 +43,7 @@ data class OrderProduct(
     val imageUrl: String,
 
     @SerializedName("productCategory")
-    val productCategory: OrderProductCategory,
+    val productCategory: List<OrderProductCategory>,
 
     @SerializedName("price")
     val price: Double,

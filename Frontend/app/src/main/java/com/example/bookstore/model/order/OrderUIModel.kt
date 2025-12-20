@@ -21,7 +21,7 @@ fun OrderDetailItem.toUIModel(): OrderUIModel {
         productName = product.name,
         authorName = product.authorName,
         imageUrl = product.imageUrl,
-        categoryName = product.productCategory.category.name,
+        categoryName = product?.productCategory?.firstOrNull()?.category?.name ?: "Khác",
         status = this.status,
         quantity = this.quantity,
         totalPrice = this.totalPrice,

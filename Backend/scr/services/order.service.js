@@ -2,9 +2,9 @@ import { findManyOrder, createManyOrder } from "../repositories/order.repository
 import { createAddress } from "../repositories/address.repository.js";
 
 export const createOrderDetail = async (userId, orderDataArray) => {
-    let newAddressId = null;
+    let newAddress = null;
     if (orderDataArray?.some(item => item?.address_id === "NEW_ADDRESS")) {
-        newAddressId = await createAddress(
+        newAddress = await createAddress(
             {
                 user_id: userId,
                 recipient_name: orderDataArray[0].recipient_name,
@@ -21,7 +21,7 @@ export const createOrderDetail = async (userId, orderDataArray) => {
 
     return await createManyOrder(orderDataArray.map(item => ({
         ...item,
-        address_id: newAddressId ?? item.address_id,
+        address_id: newAddress.id ?? item.address_id,
         user_id: userId
     })));
 }

@@ -11,7 +11,7 @@ const router = express.Router();
 router.post("/login", validate(loginSchema), authController.loginWithEmail);
 
 // Nhận ID Token từ Android App
-router.post("/auth/google/mobile", authController.handleGoogleMobileAuth);
+router.post("/oauth/google/mobile", authController.handleGoogleMobileAuth);
 
 // Redirect user tới trang Google Login 
 router.get("/oauth/google", passport.authenticate("google", {

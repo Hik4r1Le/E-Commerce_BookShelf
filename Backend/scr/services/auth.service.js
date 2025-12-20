@@ -29,7 +29,7 @@ export const loginWithEmail = async (email, password) => {
 }
 
 export const loginWithGoogleFromMobile = async (idToken) => {
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID_ANDROID;
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
     const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
     const ticket = await client.verifyIdToken({

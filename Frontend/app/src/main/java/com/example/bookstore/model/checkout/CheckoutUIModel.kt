@@ -1,25 +1,13 @@
 package com.example.bookstore.model.checkout
 
-data class CheckoutUIModel(
-    // Thông tin địa chỉ
-    val addressId: String,
+data class AddressUIItem(
+    val id: String,
+    val label: String,
     val recipientName: String,
     val phoneNumber: String,
-    val fullAddress: String, // Gộp street, district, city
-
-    // Thông tin Coupon
-    val couponCode: String?,
-    val couponDiscountValue: Double,
-    val couponDiscountType: String?,
-
-    // Thông tin Vận chuyển
-    val shippingMethodId: String,
-    val shippingType: String,
-    val shippingFee: Double,
-    val estimatedTime: String,
-
-    // Danh sách sản phẩm
-    val productItems: List<CheckoutUIProductItem>
+    val street: String,
+    val district: String,
+    val city: String
 )
 
 data class CheckoutUIProductItem(
@@ -36,42 +24,51 @@ data class CheckoutUIProductItem(
     val isInStock: Boolean
 )
 
+data class CheckoutUIModel(
+    val addresses: List<AddressUIItem>,
+    val coupons: List<CouponDetail>,
+    val shippingMethods: List<ShippingDetail>,
+    val productItems: List<CheckoutUIProductItem>
+)
+
+
 // Extension function để chuyển đổi từ CheckoutReviewData sang CheckoutUIModel
 fun CheckoutReviewData.toUIModel(): CheckoutUIModel {
-    val fullAddress = "${this.address.street}, ${this.address.district}, ${this.address.city}"
-
-    val productItems = this.cart.map { cartItem ->
-        val product = cartItem.stock.product
-        CheckoutUIProductItem(
-            cartItemId = cartItem.id,
-            stockId = cartItem.stock.id,
-            productId = product.id,
-            productName = product.name,
-            authorName = product.authorName,
-            imageUrl = product.imageUrl,
-            categoryName = product.productCategory.category.name,
-            originalPrice = product.price,
-            unitPrice = product.price * (1 - product.discount / 100.0), // Giả sử discount là %
-            quantity = cartItem.quantity,
-            isInStock = cartItem.isInStock
+    val addressList = this.address?.map { addr ->
+        AddressUIItem(
+            id = addr.id ?: "", // Nếu id null thì để rỗng
+            label = addr.label ?: "Địa chỉ",
+            recipientName = addr.recipientName ?: "Người nhận",
+            phoneNumber = addr.phoneNumber ?: "",
+            street = addr.street ?: "",
+            district = addr.district ?: "",
+            city = addr.city ?: ""
         )
-    }
+    } ?: emptyList()
+
+    val productList = this.cart?.map { cartItem ->
+        val product = cartItem.stock?.product
+        val primaryCategoryName = product?.productCategory?.firstOrNull()?.category?.name ?: "Khác"
+        CheckoutUIProductItem(
+            cartItemId = cartItem.id ?: "",
+            stockId = cartItem.stock?.id ?: "",
+            productId = product?.id ?: "",
+            productName = product?.name ?: "Sản phẩm không tên",
+            authorName = product?.authorName ?: "Ẩn danh",
+            imageUrl = product?.imageUrl ?: "", // Coil sẽ tự hiện placeholder nếu url rỗng
+            categoryName = primaryCategoryName,
+            originalPrice = product?.price ?: 0.0,
+            // Tính toán an toàn với discount
+            unitPrice = (product?.price ?: 0.0) * (1.0 - (product?.discount ?: 0.0) / 100.0),
+            quantity = cartItem.quantity ?: 0,
+            isInStock = cartItem.isInStock ?: false
+        )
+    } ?: emptyList()
 
     return CheckoutUIModel(
-        addressId = this.address.id,
-        recipientName = this.address.recipientName,
-        phoneNumber = this.address.phoneNumber,
-        fullAddress = fullAddress,
-
-        couponCode = this.coupon?.code,
-        couponDiscountValue = this.coupon?.discountValue ?: 0.0,
-        couponDiscountType = this.coupon?.discountType,
-
-        shippingMethodId = this.shipping.id,
-        shippingType = this.shipping.type,
-        shippingFee = this.shipping.shippingFee,
-        estimatedTime = this.shipping.estimatedTimeText,
-
-        productItems = productItems
+        addresses = addressList,
+        coupons = this.coupon ?: emptyList(), // Nếu không có coupon, trả về mảng rỗng thay vì null
+        shippingMethods = this.shippingMethod ?: emptyList(), // Tương tự shipping
+        productItems = productList
     )
 }

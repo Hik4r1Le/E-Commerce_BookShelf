@@ -12,6 +12,17 @@ data class OrderItemRequest(
     @SerializedName("address_id")
     val addressId: String,
 
+    @SerializedName("recipient_name")
+    val recipientName: String? = null,
+    @SerializedName("phone_number")
+    val phoneNumber: String? = null,
+    @SerializedName("street")
+    val street: String? = null,
+    @SerializedName("district")
+    val district: String? = null,
+    @SerializedName("city")
+    val city: String? = null,
+
     @SerializedName("coupon_id")
     val couponId: String?,
 

@@ -63,6 +63,11 @@ const idStringSchema = z
     .trim()
     .min(1);
 
+const stringOptionalSchema = z
+    .string()
+    .trim()
+    .optional();
+
 const quantitySchema = z.preprocess(
     (v) => {
         if (typeof v === "string" && v.trim() !== "") return Number(v);
@@ -101,10 +106,12 @@ const totalPriceSchema = z.preprocess(
 const orderItemSchema = z
     .object({
         address_id: idStringSchema,
-        coupon_id: z
-            .string()
-            .trim()
-            .optional(),
+        recipient_name: stringOptionalSchema,
+        phone_number: stringOptionalSchema,
+        street: stringOptionalSchema,
+        district: stringOptionalSchema,
+        city: stringOptionalSchema,
+        coupon_id: stringOptionalSchema,
         shipping_method_id: idStringSchema,
         stock_id: idStringSchema,
         quantity: quantitySchema,

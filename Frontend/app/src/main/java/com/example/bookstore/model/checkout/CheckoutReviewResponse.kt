@@ -12,13 +12,13 @@ data class CheckoutReviewResponse(
 
 data class CheckoutReviewData(
     @SerializedName("address")
-    val address: AddressDetail,
+    val address: List<AddressDetail>,
 
     @SerializedName("coupon")
-    val coupon: CouponDetail?, // Có thể là null nếu không có coupon
+    val coupon: List<CouponDetail>, // Có thể là null nếu không có coupon
 
     @SerializedName("shipping")
-    val shipping: ShippingDetail,
+    val shippingMethod: List<ShippingDetail>,
 
     @SerializedName("cart")
     val cart: List<CheckoutCartItem>
@@ -120,7 +120,7 @@ data class CheckoutProduct(
     val imageUrl: String,
 
     @SerializedName("productCategory")
-    val productCategory: CheckoutProductCategory,
+    val productCategory: List<CheckoutProductCategory>, // Tôi mới thay đổi ở đây thành List
 
     @SerializedName("price")
     val price: Double,

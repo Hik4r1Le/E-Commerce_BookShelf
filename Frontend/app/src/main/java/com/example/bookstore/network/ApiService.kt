@@ -2,6 +2,7 @@ package com.example.bookstore.network
 
 import com.example.bookstore.model.login.LoginRequest
 import com.example.bookstore.model.login.LoginResponse
+import com.example.bookstore.model.login.GoogleLoginRequest
 import com.example.bookstore.model.register.RegisterRequest
 import com.example.bookstore.model.register.RegisterResponse
 import com.example.bookstore.model.forgot_password.ForgotPasswordRequest
@@ -36,8 +37,8 @@ interface ApiService {
     @POST("/api/v1/auth/register")
     suspend fun register(@Body newUserCredentials: RegisterRequest): Response<RegisterResponse>
     // Login with Google API
-    @GET("/api/v1/auth/oauth/google/mobile")
-    suspend fun loginWithGoogle(@Body idToken: String): Response<LoginResponse>
+    @POST("/api/v1/auth/oauth/google/mobile")
+    suspend fun loginWithGoogle(@Body request: GoogleLoginRequest): Response<LoginResponse>
     // Forgot password API
     @POST("/api/v1/auth/forgot-password")
     suspend fun forgotPassword(@Body email: ForgotPasswordRequest): Response<Unit>

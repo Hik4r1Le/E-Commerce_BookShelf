@@ -2,6 +2,7 @@ package com.example.bookstore.repository
 
 import com.example.bookstore.model.login.LoginRequest
 import com.example.bookstore.model.login.LoginResponse
+import com.example.bookstore.model.login.GoogleLoginRequest
 import com.example.bookstore.model.register.RegisterRequest
 import com.example.bookstore.model.register.RegisterResponse
 import com.example.bookstore.model.forgot_password.ForgotPasswordRequest
@@ -66,7 +67,8 @@ class AuthRepository(
     suspend fun loginWithGoogle(idToken: String): Result<LoginResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.loginWithGoogle(idToken)
+                val request = GoogleLoginRequest(idToken)
+                val response = apiService.loginWithGoogle(request)
                 if (response.isSuccessful) {
                     response.body()?.let { loginResponse ->
                         tokenManager.saveAuthToken(loginResponse.data.token)

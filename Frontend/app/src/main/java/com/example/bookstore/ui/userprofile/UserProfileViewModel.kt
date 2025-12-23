@@ -2,42 +2,53 @@ package com.example.bookstore.ui.userprofile
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.bookstore.model.UserProfileUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class UserProfileViewModel : ViewModel() {
 
+    // StateFlow giữ trạng thái UI
     private val _uiState = MutableStateFlow(
         UserProfileUiState(
-            name = "Nguyễn Văn A",
-            email = "nguyenvana123@gmail.com",
-            phone = "0987654321",
-            address = " Khu phố 34, P. Linh Xuân, TP. Hồ Chí Minh"
+            name = "",
+            email = "",
+            phone = "",
+            address = "",
+            avatarUri = null
         )
     )
-
     val uiState: StateFlow<UserProfileUiState> = _uiState
 
-    // Update fields
-    fun onNameChange(value: String) {
-        _uiState.value = _uiState.value.copy(name = value)
+    // Cập nhật tên
+    fun onNameChange(newName: String) {
+        _uiState.update { it.copy(name = newName) }
     }
 
-    fun onPhoneChange(value: String) {
-        _uiState.value = _uiState.value.copy(phone = value)
+    // Cập nhật số điện thoại
+    fun onPhoneChange(newPhone: String) {
+        _uiState.update { it.copy(phone = newPhone) }
     }
 
-    fun onAddressChange(value: String) {
-        _uiState.value = _uiState.value.copy(address = value)
+    // Cập nhật địa chỉ
+    fun onAddressChange(newAddress: String) {
+        _uiState.update { it.copy(address = newAddress) }
     }
 
+    // Cập nhật avatar
     fun onAvatarChange(uri: Uri?) {
-        _uiState.value = _uiState.value.copy(avatarUri = uri)
+        _uiState.update { it.copy(avatarUri = uri) }
     }
 
-    // Save profile
+    // Lưu profile
     fun saveProfile() {
-        // TODO: Call API update profile
+        viewModelScope.launch {
+            val profile = _uiState.value
+            // TODO: gọi repository/API lưu profile
+            println("Profile saved: $profile")
+        }
     }
 }

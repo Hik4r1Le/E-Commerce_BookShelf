@@ -35,6 +35,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.bookstore.R
 import com.example.bookstore.model.UserProfileUiState
+import com.example.bookstore.ui.notification.NotificationFragment
 import com.example.bookstore.ui.userprofile.UserProfileViewModel
 
 private val HeaderPurple = Color(0xFFA7AAE1)
@@ -68,7 +69,10 @@ class UserProfileFragment : Fragment() {
                         onSave = { viewModel.saveProfile() },
                         onNameChange = viewModel::onNameChange,
                         onPhoneChange = viewModel::onPhoneChange,
-                        onAddressChange = viewModel::onAddressChange
+                        onAddressChange = viewModel::onAddressChange,
+                        onNotificationClick = {
+                            NotificationFragment.open(this@UserProfileFragment)
+                        }
                     )
 
                     if (showAvatarPicker) {
@@ -96,14 +100,15 @@ fun UserProfileScreen(
     onSave: () -> Unit,
     onNameChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
-    onAddressChange: (String) -> Unit
+    onAddressChange: (String) -> Unit,
+    onNotificationClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFFFF8F3))
     ) {
-        UserProfileHeader(uiState, onEdit, onPickAvatar)
+        UserProfileHeader(uiState, onEdit, onPickAvatar, onNotificationClick)
         Spacer(modifier = Modifier.height(16.dp))
         UserProfileForm(
             uiState = uiState,
@@ -122,7 +127,8 @@ fun UserProfileScreen(
 fun UserProfileHeader(
     uiState: UserProfileUiState,
     onEdit: () -> Unit,
-    onPickAvatar: () -> Unit
+    onPickAvatar: () -> Unit,
+    onNotificationClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -234,7 +240,8 @@ fun UserProfileHeader(
             Icon(
                 Icons.Default.Notifications,
                 contentDescription = "Notifications",
-                tint = AccentYellow
+                tint = AccentYellow,
+                modifier = Modifier.clickable { onNotificationClick() }
             )
             Text("Đăng xuất", color = Color.Red)
         }
@@ -363,7 +370,8 @@ fun Preview_Header() {
             email = "nguyenvana123@gmail.com"
         ),
         onEdit = {},
-        onPickAvatar = {}
+        onPickAvatar = {},
+        onNotificationClick = {}
     )
 }
 
@@ -402,6 +410,7 @@ fun Preview_Full() {
         onSave = {},
         onNameChange = {},
         onPhoneChange = {},
-        onAddressChange = {}
+        onAddressChange = {},
+        onNotificationClick = {}
     )
 }

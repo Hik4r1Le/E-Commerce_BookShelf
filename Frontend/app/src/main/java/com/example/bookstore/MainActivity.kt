@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
             setOf(
                 R.id.navigation_home,
                 R.id.navigation_cart,
-                R.id.navigation_orders,
+                R.id.navigation_order,
                 R.id.navigation_profile
             )
         )

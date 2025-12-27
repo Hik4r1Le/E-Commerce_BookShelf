@@ -6,3 +6,7 @@ export const findManyProduct = async (filter, option, orderBy, skip, take) =>
 
 export const findProduct = async (filter, option) =>
     await prisma.productCategory.findUnique(queryBuilder(filter, option));
+
+export const countProduct = async (filter) =>
+    await prisma.productCategory.count(queryBuilder(filter));
+

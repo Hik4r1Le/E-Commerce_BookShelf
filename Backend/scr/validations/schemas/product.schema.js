@@ -96,8 +96,8 @@ export const getProductSchema =
 
             take: z
                 .preprocess(
-                    (v) => (v === undefined ? 20 : Number(v)),
-                    z.number().int().positive().max(100).default(20)
+                    (v) => (v === undefined ? 30 : Number(v)),
+                    z.number().int().positive().max(100).default(30)
                 ),
         }).strip(), // không lỗi, nhưng các field ngoài những field được liệt kê sẽ bị bỏ đi
     });

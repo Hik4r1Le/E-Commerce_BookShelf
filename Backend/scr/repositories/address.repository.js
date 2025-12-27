@@ -6,3 +6,6 @@ export const findManyAddress = async (filter, option, orderBy, skip, take) =>
 
 export const createAddress = async (data, option) =>
     await prisma.address.create(queryBuilder(null, option, data));
+
+export const updateAddress = async (filter, option, data) =>
+    await prisma.address.update(queryBuilder(filter, option, data));

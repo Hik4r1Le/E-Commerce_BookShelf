@@ -1,4 +1,4 @@
-import { findProduct, findManyProduct } from "../repositories/product.repository.js"
+import { findProduct, findManyProduct, countProduct } from "../repositories/product.repository.js"
 
 export const findProductById = async (productId) =>
     await findManyProduct(
@@ -68,13 +68,15 @@ export const findProductForHome = async (filter, sort, skip, take) => {
     const where = {};
     const { name, tag, author_name, category } = filter || {};
 
-    if (name || tag || author_name) {
-        where.product = {
-            ...(name && { name: { contains: name } }),
-            ...(tag && { tag }),
-            ...(author_name && { author_name: { contains: author_name } }),
-        };
-    }
+    const productFilter = {
+        image_url: { not: "" },
+    };
+
+    if (name) productFilter.name = { contains: name };
+    if (tag) productFilter.tag = tag;
+    if (author_name) productFilter.author_name = { contains: author_name };
+
+    where.product = productFilter;
 
     if (category) {
         where.category = {
@@ -91,6 +93,26 @@ export const findProductForHome = async (filter, sort, skip, take) => {
             sort.field === "category"
                 ? { category: { slug: sort.order } }
                 : { product: { [sort.field]: sort.order } };
+    }
+
+    let finalSkip = skip;
+
+    const isHomeRandom =
+        skip === 0 &&
+        !name &&
+        !tag &&
+        !author_name &&
+        !category &&
+        !sort?.field;
+
+    if (isHomeRandom) {
+        const total = await countProduct({
+            product: { image_url: { not: "" } },
+        });
+
+        if (total > take) {
+            finalSkip = Math.floor(Math.random() * (total - take));
+        }
     }
 
     return await findManyProduct(
@@ -120,7 +142,7 @@ export const findProductForHome = async (filter, sort, skip, take) => {
             }
         },
         orderBy,
-        skip,
+        finalSkip,
         take,
     );
 }

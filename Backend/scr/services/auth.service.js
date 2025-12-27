@@ -54,7 +54,7 @@ export const loginOrRegisterWithGoogle = async (profile) => {
     if (!emailObj) {
         const error = new Error("Google profile has no email");
         error.statusCode = 400;
-        throw new error;
+        throw error;
     }
 
     const email = emailObj.value;
@@ -67,7 +67,7 @@ export const loginOrRegisterWithGoogle = async (profile) => {
     if (!emailVerified) {
         const error = new Error("Email not verified by Google");
         error.statusCode = 403;
-        throw new error;
+        throw error;
     }
 
     // Tìm user xem có tồn tại hay không

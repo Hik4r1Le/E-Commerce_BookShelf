@@ -5,6 +5,7 @@ import checkoutRouter from "./checkout.route.js"
 import orderRotuer from "./order.route.js"
 import bannerRouter from "./banner.route.js"
 import reviewRouter from "./review.route.js"
+import userProfileRouter from "./userProfile.route.js"
 
 const v1Routes = (app) => {
     // Authentication API
@@ -26,8 +27,10 @@ const v1Routes = (app) => {
     app.use("/api/v1/reviews", reviewRouter);
 
     // Banner API
-    app.use("/api/v1/banners", bannerRouter)
+    app.use("/api/v1/banners", bannerRouter);
 
+    // User Profile API
+    app.use("/api/v1/user-profile", userProfileRouter);
 };
 
 export default v1Routes;

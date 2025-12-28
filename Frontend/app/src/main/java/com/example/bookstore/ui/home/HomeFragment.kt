@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,11 +57,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.fragment.findNavController
+import coil.compose.AsyncImage
 import com.example.bookstore.data.UI_HomeBestSeller_data
 import com.example.bookstore.data.UI_HomeRecommend_data
+import com.example.bookstore.model.SearchResult
 import com.example.bookstore.ui.theme.BookstoreTheme
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
@@ -112,12 +116,12 @@ fun HomeScreen(onBookClick: () -> Unit,
             } else {
                 LazyColumn {
                     items(searchResults) { book ->
-                        book.name?.let {
-                            Text(
-                                text = it,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
+                        BookSearchItem(
+                            book = book,
+                            onClick = {
+                                // later: navigate to detail
+                            }
+                        )
                     }
                 }
             }
@@ -372,6 +376,65 @@ fun RecommendedList(recommendedBooks: List<UI_HomeRecommend>,
         }
     }
 }
+
+@Composable
+fun BookSearchItem(
+    book: SearchResult,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp)
+        ) {
+
+            AsyncImage(
+                model = book.image_url,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
+                Text(
+                    text = book.name ?: "Unknown title",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = book.author_name ?: "",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = book.price?.let { "$it đ" } ?: "",
+                    fontSize = 14.sp,
+                    color = Color(0xFF2E7D32)
+                )
+            }
+        }
+    }
+}
+
+
 
 @Preview
 @Composable

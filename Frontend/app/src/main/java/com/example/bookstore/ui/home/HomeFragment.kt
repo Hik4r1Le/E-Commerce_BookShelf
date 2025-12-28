@@ -41,14 +41,23 @@ import com.example.bookstore.R
 import com.example.bookstore.model.UI_HomeBestSeller
 import com.example.bookstore.model.UI_HomeRecommend
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.fragment.findNavController
 import com.example.bookstore.data.UI_HomeBestSeller_data
 import com.example.bookstore.data.UI_HomeRecommend_data
@@ -73,45 +82,76 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 }
 
 @Composable
-fun HomeScreen(onBookClick: () -> Unit) {
-    Column(modifier = Modifier
-        //.padding(16.dp)
-        .fillMaxSize(),
+fun HomeScreen(onBookClick: () -> Unit,
+               viewModel: HomeViewModel = viewModel()) {
+    var searchOpen by remember { mutableStateOf(false) }
+    val searchResults by viewModel.searchResults.collectAsState()
+    Column(
+        modifier = Modifier
+            //.padding(16.dp)
+            .fillMaxSize(),
         horizontalAlignment = Alignment.Start
     ) {
         HomeHeader(
+            searchOpen = searchOpen,
             onProfileClick = {},
-            onSearchClick = {},
+            onSearchClick = { searchOpen = true },
+            onCloseSearch = {
+                searchOpen = false
+                viewModel.onQueryChange("") // reset search
+            },
+            viewModel = viewModel
             //modifier = Modifier.weight(1f)
         )
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-        ) {
-            item {
+        if (searchOpen) {
+            if (searchResults.isEmpty()) {
                 Text(
-                    text = "Sách bán chạy",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                    text = "No results found",
+                    modifier = Modifier.padding(16.dp)
                 )
-                BestSellerCard(
-                    bestSellerBooks = UI_HomeBestSeller_data().loadData(),
-                    onBookClick = onBookClick
-                )
+            } else {
+                LazyColumn {
+                    items(searchResults) { book ->
+                        book.name?.let {
+                            Text(
+                                text = it,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                }
             }
-            item {
-                Text(
-                    text = "Đề xuất cho bạn",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
-                )
-                RecommendedList(
-                    recommendedBooks = UI_HomeRecommend_data().loadData(),
-                    onBookClick = onBookClick
-                )
+        }else {
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+            ) {
+                item {
+                    Text(
+                        text = "Sách bán chạy",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                    )
+                    BestSellerCard(
+                        bestSellerBooks = UI_HomeBestSeller_data().loadData(),
+                        onBookClick = onBookClick
+                    )
+                }
+                item {
+                    Text(
+                        text = "Đề xuất cho bạn",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                    )
+                    RecommendedList(
+                        recommendedBooks = UI_HomeRecommend_data().loadData(),
+                        onBookClick = onBookClick
+                    )
+                }
             }
         }
     }
@@ -119,10 +159,14 @@ fun HomeScreen(onBookClick: () -> Unit) {
 
 @Composable
 fun HomeHeader(
+    searchOpen: Boolean,
     onProfileClick: () -> Unit,
     onSearchClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onCloseSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel
 ) {
+    val query by viewModel.query.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -132,24 +176,58 @@ fun HomeHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onProfileClick) {
-            Image(
-                painter = painterResource(R.drawable.profile_holder),
-                contentDescription = null,
+        if (!searchOpen) {
+            IconButton(onClick = onProfileClick) {
+                Image(
+                    painter = painterResource(R.drawable.profile_holder),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                )
+            }
+            IconButton(onClick = onSearchClick) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = Color.DarkGray,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                )
+            }
+        } else {
+            TextField(
+                value = query,
+                onValueChange = viewModel::onQueryChange,
+                placeholder = {
+                    Text(
+                        text = "Search books…",
+                        fontSize = 12.sp
+                    )
+                },
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 12.sp
+                ),
+                singleLine = true,
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+                    .weight(1f)
+                    .height(48.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    disabledContainerColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
             )
-        }
-        IconButton(onClick = onSearchClick) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = Color.DarkGray,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-            )
+
+            IconButton(onClick = onCloseSearch) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close search"
+                )
+            }
         }
     }
 }
@@ -167,7 +245,7 @@ fun BestSellerCard(
             shape = RoundedCornerShape(12.dp),
             color = Color(color = 0xFFF2AEBB)
         )
-        .clickable { onBookClick()},
+        .clickable { onBookClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4))
     ) {
         LazyRow(
@@ -202,7 +280,7 @@ fun RecommendedCard(recommend: UI_HomeRecommend,
             shape = RoundedCornerShape(12.dp),
             color = Color(color = 0xFFF2AEBB)
         )
-        .clickable { onBookClick()},
+        .clickable { onBookClick() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4))
     ) {
         Row(
@@ -211,7 +289,8 @@ fun RecommendedCard(recommend: UI_HomeRecommend,
             Image(
                 painter = painterResource(recommend.imageID),
                 contentDescription = null,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
                     .width(100.dp)
                     .height(140.dp)
                     .padding(start = 8.dp),

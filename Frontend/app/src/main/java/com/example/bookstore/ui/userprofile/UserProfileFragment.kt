@@ -1,19 +1,16 @@
-package com.example.bookstore.ui.profile
+package com.example.bookstore.ui.userprofile
 
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -23,63 +20,88 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import coil.compose.AsyncImage
 import com.example.bookstore.R
-import com.example.bookstore.model.UserProfileUiState
 import com.example.bookstore.ui.notification.NotificationFragment
-import com.example.bookstore.ui.userprofile.UserProfileViewModel
 
+// Định nghĩa màu sắc như bản gốc của bạn
 private val HeaderPurple = Color(0xFFA7AAE1)
 private val AccentYellow = Color(0xFFFFC107)
 
-// Fragment
-class UserProfileFragment : Fragment() {
+class UserProfileFragment : Fragment(R.layout.fragment_user_profile) {
 
-    private val viewModel: UserProfileViewModel by viewModels()
+    private val viewModel: UserProfileViewModel by viewModels {
+        UserProfileViewModelFactory(requireContext())
+    }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setContent {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val composeView = view.findViewById<ComposeView>(R.id.composeView)
+
+        viewModel.loadProfile()
+
+        composeView.setContent {
+            // Sử dụng MaterialTheme hoặc BookstoreTheme của bạn
+            MaterialTheme {
                 val uiState by viewModel.uiState.collectAsState()
+                val context = LocalContext.current
                 var showAvatarPicker by remember { mutableStateOf(false) }
 
-                MaterialTheme {
-                    UserProfileScreen(
-                        uiState = uiState,
-                        onBack = {
-                            requireActivity()
-                                .onBackPressedDispatcher
-                                .onBackPressed()
-                        },
-                        onEdit = {},
-                        onPickAvatar = { showAvatarPicker = true },
-                        onSave = { viewModel.saveProfile() },
-                        onNameChange = viewModel::onNameChange,
-                        onPhoneChange = viewModel::onPhoneChange,
-                        onAddressChange = viewModel::onAddressChange,
-                        onNotificationClick = {
-                            NotificationFragment.open(this@UserProfileFragment)
+                // Xử lý thông báo thành công
+                LaunchedEffect(uiState.updateSuccess) {
+                    if (uiState.updateSuccess) {
+                        Toast.makeText(context, "Cập nhật thành công!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                LaunchedEffect(uiState.error) {
+                    uiState.error?.let {
+                        // Nếu Backend trả về "Avatar image is required", bạn sẽ thấy ngay lập tức
+                        Toast.makeText(context, "Lỗi: $it", Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        UserProfileScreen(
+                            uiState = uiState,
+                            onBack = { findNavController().navigateUp() },
+                            onPickAvatar = { showAvatarPicker = true },
+                            onSave = { viewModel.saveProfile(context) },
+                            onNameChange = viewModel::onNameChange,
+                            onDobChange = viewModel::onDobChange,
+                            onGenderChange = viewModel::onGenderChange,
+                            onPhoneChange = viewModel::onPhoneChange,
+                            onStreetChange = viewModel::onStreetChange,
+                            onDistrictChange = viewModel::onDistrictChange,
+                            onCityChange = viewModel::onCityChange,
+                            onNotificationClick = {
+                                NotificationFragment.open(this@UserProfileFragment)
+                            }
+                        )
+
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                         }
-                    )
+                    }
 
                     if (showAvatarPicker) {
                         AvatarPickerDialog(
                             onDismiss = { showAvatarPicker = false },
-                            onAvatarPicked = {
-                                viewModel.onAvatarChange(it)
+                            onAvatarPicked = { uri ->
+                                viewModel.onAvatarChange(uri)
                                 showAvatarPicker = false
                             }
                         )
@@ -90,39 +112,105 @@ class UserProfileFragment : Fragment() {
     }
 }
 
-// Screen
 @Composable
 fun UserProfileScreen(
     uiState: UserProfileUiState,
     onBack: () -> Unit,
-    onEdit: () -> Unit,
     onPickAvatar: () -> Unit,
     onSave: () -> Unit,
     onNameChange: (String) -> Unit,
+    onDobChange: (String) -> Unit,
+    onGenderChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
-    onAddressChange: (String) -> Unit,
+    onStreetChange: (String) -> Unit,
+    onDistrictChange: (String) -> Unit,
+    onCityChange: (String) -> Unit,
     onNotificationClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFFFF8F3))
+            .verticalScroll(rememberScrollState()) // Cho phép cuộn để không bị che nút Lưu
     ) {
-        UserProfileHeader(uiState, onEdit, onPickAvatar, onNotificationClick)
+        UserProfileHeader(uiState, onEdit = {}, onPickAvatar, onNotificationClick)
+
         Spacer(modifier = Modifier.height(16.dp))
-        UserProfileForm(
-            uiState = uiState,
-            onBack = onBack,
-            onSave = onSave,
-            onNameChange = onNameChange,
-            onPhoneChange = onPhoneChange,
-            onAddressChange = onAddressChange,
-            bottomSpacer = 90.dp
-        )
+
+        // Form Title & Back Button
+        Box(modifier = Modifier.fillMaxWidth().height(60.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                modifier = Modifier
+                    .size(32.dp)
+                    .align(Alignment.CenterStart)
+                    .offset(x = 24.dp)
+                    .clickable { onBack() }
+            )
+            Text(
+                "Chỉnh sửa thông tin",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+
+        // --- Các trường nhập liệu ---
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ProfileTextField("Họ và tên", uiState.data.fullname, onNameChange)
+
+            // Nhập ngày sinh thông minh (Masking DD/MM/YYYY)
+            ProfileTextField(
+                label = "Ngày sinh (DD/MM/YYYY)",
+                value = uiState.data.dob,
+                onChange = { if (it.length <= 8) onDobChange(it) },
+                visualTransformation = DateMaskTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+
+            // Chọn giới tính (Dropdown)
+            GenderDropdown(selectedGender = uiState.data.gender, onGenderChange = onGenderChange)
+
+            ProfileTextField(
+                label = "Số điện thoại",
+                value = uiState.data.phoneNumber,
+                onChange = onPhoneChange,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                isError = uiState.phoneError != null,
+                supportingText = uiState.phoneError
+            )
+
+            // Địa chỉ tách làm 3
+            Text("Địa chỉ", fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 14.sp)
+            ProfileTextField("Tên đường / Số nhà", uiState.data.street, onStreetChange)
+            ProfileTextField("Phường / Quận", uiState.data.district, onDistrictChange)
+            ProfileTextField("Tỉnh / Thành phố", uiState.data.city, onCityChange)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Nút LƯU
+        Button(
+            onClick = onSave,
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .fillMaxWidth()
+                .height(55.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2AEBB)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("LƯU", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+        }
+
+        // Khoảng trống dưới cùng để không bị che bởi Bottom Nav Bar
+        Spacer(modifier = Modifier.height(130.dp))
     }
 }
 
-// Header
 @Composable
 fun UserProfileHeader(
     uiState: UserProfileUiState,
@@ -135,184 +223,128 @@ fun UserProfileHeader(
             .fillMaxWidth()
             .height(180.dp)
             .background(HeaderPurple)
-            .padding(16.dp)
+            .padding(16.dp) // Padding tổng thể cho Header
     ) {
-
-        // Edit button
+        // 1. Nút Edit: Đặt ở góc cực trên bên phải cho thoáng
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = (-16).dp)
                 .size(34.dp)
                 .clip(CircleShape)
                 .background(Color.White)
                 .clickable { onEdit() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Edit, contentDescription = null, tint = AccentYellow)
+            Icon(Icons.Default.Edit, null, tint = AccentYellow, modifier = Modifier.size(20.dp))
         }
 
-        // Avatar + name/email
+        // 2. Nhóm Avatar và Tên: Căn giữa theo chiều dọc (CenterStart)
+        // Giảm padding start để Avatar không bị đẩy quá sâu vào trong
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.CenterStart)
-                .padding(start = 32.dp),
+                .padding(start = 8.dp, bottom = 12.dp), // Padding bottom để né bớt hàng nút dưới
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box {
-                Box(
+                AsyncImage(
+                    model = uiState.selectedLocalUri ?: uiState.data.avatarUrl,
+                    contentDescription = null,
+                    error = painterResource(R.drawable.avatar_demo),
+                    placeholder = painterResource(R.drawable.avatar_demo),
                     modifier = Modifier
-                        .size(96.dp)
+                        .size(90.dp) // Giảm nhẹ size để hài hòa hơn với text
                         .clip(CircleShape)
-                        .background(Color(0xFFF5D3C4)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (uiState.avatarUri != null) {
-                        AndroidView(
-                            factory = { context ->
-                                ImageView(context).apply {
-                                    scaleType = ImageView.ScaleType.CENTER_CROP
-                                    setImageURI(uiState.avatarUri)
-                                }
-                            },
-                            modifier = Modifier
-                                .size(88.dp)
-                                .clip(CircleShape)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(R.drawable.avatar_demo),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(88.dp)
-                                .clip(CircleShape)
-                        )
-                    }
-                }
-
+                        .border(2.dp, Color.White, CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                // Nút Camera: Chỉnh lại offset để bám sát vòng tròn avatar
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .offset(6.dp, 6.dp)
-                        .size(26.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(Color.White)
-                        .clickable { onPickAvatar() },
+                        .clickable { onPickAvatar() }
+                        .border(1.dp, Color.LightGray, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.CameraAlt,
-                        contentDescription = null,
-                        tint = AccentYellow,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.CameraAlt, null, tint = AccentYellow, modifier = Modifier.size(16.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) { // Dùng weight để text tự xuống dòng nếu quá dài
                 Text(
-                    uiState.name,
+                    text = uiState.data.fullname.ifEmpty { "Người dùng" },
                     color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 28.sp
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    uiState.email,
-                    color = Color.Black,
-                    fontSize = 14.sp
-                )
+                // Bạn có thể thêm email ở đây nếu muốn hiển thị lại
             }
         }
 
-        // Seller Panel - Notifications - Logout
+        // 3. Nhóm chức năng dưới cùng: Căn sát góc dưới bên phải (BottomEnd)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 4.dp),
+                .padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Seller Panel", color = Color.Red)
-            Icon(
-                Icons.Default.Notifications,
-                contentDescription = "Notifications",
-                tint = AccentYellow,
-                modifier = Modifier.clickable { onNotificationClick() }
+            Text(
+                "Seller Panel",
+                color = Color.Red,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { /* Handle click */ }
             )
-            Text("Đăng xuất", color = Color.Red)
+
+            // Icon thông báo với vùng chạm rộng hơn cho dễ bấm
+            IconButton(
+                onClick = onNotificationClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(Icons.Default.Notifications, null, tint = AccentYellow)
+            }
+
+            Text(
+                "Đăng xuất",
+                color = Color.Red,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { /* Handle logout */ }
+            )
         }
     }
 }
 
-// Form
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserProfileForm(
-    uiState: UserProfileUiState,
-    onBack: () -> Unit,
-    onSave: () -> Unit,
-    onNameChange: (String) -> Unit,
-    onPhoneChange: (String) -> Unit,
-    onAddressChange: (String) -> Unit,
-    bottomSpacer: Dp
-) {
-    Column {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                modifier = Modifier
-                    .size(32.dp)
-                    .align(Alignment.CenterStart)
-                    .offset(x = 24.dp)
-                    .clickable { onBack() }
-            )
+fun GenderDropdown(selectedGender: String, onGenderChange: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf("MALE", "FEMALE", "OTHERS")
 
-            Text(
-                "Chỉnh sửa thông tin",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-
-        Column(
-            modifier = Modifier.padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            ProfileTextField("Họ và tên", uiState.name, onNameChange)
-            ProfileTextField("Email (*)", uiState.email, {})
-            ProfileTextField("Số điện thoại", uiState.phone, onPhoneChange)
-            ProfileTextField("Địa chỉ", uiState.address, onAddressChange)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = onSave,
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF2AEBB)),
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = selectedGender,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Giới tính") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(
-                "LƯU",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 30.sp
-            )
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = { onGenderChange(option); expanded = false }
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(bottomSpacer))
     }
 }
 
@@ -320,97 +352,65 @@ fun UserProfileForm(
 fun ProfileTextField(
     label: String,
     value: String,
-    onChange: (String) -> Unit
+    onChange: (String) -> Unit,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    isError: Boolean = false,      // Thêm tham số này
+    supportingText: String? = null // Thêm tham số này
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    )
-}
-
-// Avatar Picker Dialog
-@Composable
-fun AvatarPickerDialog(
-    onDismiss: () -> Unit,
-    onAvatarPicked: (Uri?) -> Unit
-) {
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        onAvatarPicked(uri)
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Chọn ảnh đại diện") },
-        text = { Text("Chọn ảnh từ thư viện") },
-        confirmButton = {
-            TextButton(onClick = { launcher.launch("image/*") }) {
-                Text("Gallery")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Hủy")
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = keyboardOptions,
+        visualTransformation = visualTransformation,
+        singleLine = true,
+        isError = isError, // Kích hoạt trạng thái lỗi (viền đỏ)
+        supportingText = { // Hiển thị dòng chữ báo lỗi bên dưới
+            if (isError && supportingText != null) {
+                Text(text = supportingText, color = MaterialTheme.colorScheme.error)
             }
         }
     )
 }
 
-// Previews
-@Preview(showBackground = true)
-@Composable
-fun Preview_Header() {
-    UserProfileHeader(
-        uiState = UserProfileUiState(
-            name = "Nguyễn Văn A",
-            email = "nguyenvana123@gmail.com"
-        ),
-        onEdit = {},
-        onPickAvatar = {},
-        onNotificationClick = {}
-    )
+// --- Logic Nhập ngày tháng thông minh DD/MM/YYYY ---
+class DateMaskTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val trimmed = if (text.text.length >= 8) text.text.substring(0, 8) else text.text
+        var out = ""
+        for (i in trimmed.indices) {
+            out += trimmed[i]
+            if (i == 1 || i == 3) out += "/"
+        }
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 1) return offset
+                if (offset <= 3) return offset + 1
+                if (offset <= 8) return offset + 2
+                return 10
+            }
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 2) return offset
+                if (offset <= 5) return offset - 1
+                if (offset <= 10) return offset - 2
+                return 8
+            }
+        }
+        return TransformedText(AnnotatedString(out), offsetMapping)
+    }
 }
 
-@Preview(showBackground = true, heightDp = 500)
 @Composable
-fun Preview_Form() {
-    UserProfileForm(
-        uiState = UserProfileUiState(
-            name = "Nguyễn Văn A",
-            email = "nguyenvana123@gmail.com",
-            phone = "0987654321",
-            address = "Khu phố 34, P. Linh Xuân, TP. Hồ Chí Minh"
-        ),
-        onBack = {},
-        onSave = {},
-        onNameChange = {},
-        onPhoneChange = {},
-        onAddressChange = {},
-        bottomSpacer = 10.dp
-    )
-}
-
-@Preview(showBackground = true, heightDp = 800)
-@Composable
-fun Preview_Full() {
-    UserProfileScreen(
-        uiState = UserProfileUiState(
-            name = "Nguyễn Văn A",
-            email = "nguyenvana123@gmail.com",
-            phone = "0987654321",
-            address = "Khu phố 34, P. Linh Xuân, TP. Hồ Chí Minh"
-        ),
-        onBack = {},
-        onEdit = {},
-        onPickAvatar = {},
-        onSave = {},
-        onNameChange = {},
-        onPhoneChange = {},
-        onAddressChange = {},
-        onNotificationClick = {}
+fun AvatarPickerDialog(onDismiss: () -> Unit, onAvatarPicked: (Uri?) -> Unit) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> onAvatarPicked(uri) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ảnh đại diện") },
+        text = { Text("Chọn ảnh từ thư viện của bạn") },
+        confirmButton = { TextButton(onClick = { launcher.launch("image/*") }) { Text("Gallery") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
     )
 }

@@ -20,6 +20,7 @@ import com.example.bookstore.model.checkout.CheckoutReviewRequest
 import com.example.bookstore.model.checkout.CheckoutReviewResponse
 import com.example.bookstore.model.order.CreateOrderRequest
 import com.example.bookstore.model.order.OrderResponse
+import com.example.bookstore.model.userprofile.UserProfileResponse
 
 import retrofit2.Response
 import retrofit2.http.Body
@@ -28,6 +29,11 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PATCH
 import retrofit2.http.DELETE
+
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 
 interface ApiService {
     // Login API
@@ -96,4 +102,23 @@ interface ApiService {
     // API Xem các đơn hàng
     @GET("/api/v1/order")
     suspend fun getOrders(): Response<OrderResponse>
+
+    // User Profile API
+    @GET("/api/v1/user-profile")
+    suspend fun getUserProfile(): Response<UserProfileResponse>
+
+    @Multipart
+    @PATCH("/api/v1/user-profile")
+    suspend fun updateUserProfile(
+        @Part avatar: MultipartBody.Part?,
+        @Part("avatar_url") avatarUrl: RequestBody?,
+        @Part("fullname") fullname: RequestBody,
+        @Part("dob") dob: RequestBody,
+        @Part("gender") gender: RequestBody,
+        @Part("address_id") addressId: RequestBody?,
+        @Part("phone_number") phoneNumber: RequestBody,
+        @Part("street") street: RequestBody,
+        @Part("district") district: RequestBody,
+        @Part("city") city: RequestBody
+    ): Response<Unit>
 }

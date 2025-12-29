@@ -58,9 +58,9 @@
     <!--  Navigation User Profile UI  -->
     <fragment
         android:id="@+id/navigation_profile"
-        android:name="com.example.bookstore.ui.profile.ProfileFragment"
+        android:name="com.example.bookstore.ui.userprofile.UserProfileFragment"
         android:label="@string/title_profile"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_user_profile" />
 
     <!--  Navigation Book Detail UI  -->
     <fragment

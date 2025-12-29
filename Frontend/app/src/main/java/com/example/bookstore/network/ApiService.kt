@@ -34,6 +34,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.http.Multipart
 import retrofit2.http.Part
+import retrofit2.http.Query
 
 interface ApiService {
     // Login API
@@ -59,7 +60,9 @@ interface ApiService {
     suspend fun verifyOtp(@Body otpInfo: VerifyOtpRequest): Response<VerifyOtpResponse>
     // Home API
     @GET("/api/v1/products/home")
-    suspend fun getHomeProducts(): Response<HomeProductResponse>
+    suspend fun getHomeProducts(
+        @Query("filter") filter: String? = null
+    ): Response<HomeProductResponse>
     // Product detail API
     @GET("/api/v1/products/{id}")
     suspend fun getProductDetail(@Path("id") productId: String): Response<ProductDetailResponse>

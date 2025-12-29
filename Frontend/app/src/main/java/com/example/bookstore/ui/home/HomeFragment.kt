@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.example.bookstore.R
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -55,10 +57,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import com.example.bookstore.model.products.HomeUIProduct
 import coil.compose.AsyncImage
 import java.text.NumberFormat
 import java.util.Locale
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
     private val viewModel: HomeViewModel by viewModels {
@@ -104,6 +112,10 @@ fun HomeScreen(
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
 
+    var searchOpen by remember { mutableStateOf(false) }
+    val searchResults = viewModel.searchResults
+    val searchQuery = viewModel.searchQuery
+
     // Phân loại sản phẩm (Ví dụ: Best Seller là những sản phẩm có tag "best_seller")
     val bestSellerProducts = products.filter { it.isBestSeller }
     val recommendedProducts = products.filter { !it.isBestSeller }
@@ -114,9 +126,15 @@ fun HomeScreen(
         horizontalAlignment = Alignment.Start
     ) {
         HomeHeader(
-            onProfileClick = {},
-            onSearchClick = {},
-            //modifier = Modifier.weight(1f)
+            searchOpen = searchOpen,
+            searchQuery = searchQuery,
+            onSearchQueryChange = { viewModel.onQueryChange(it) },
+            onProfileClick = { /* Điều hướng profile */ },
+            onSearchClick = { searchOpen = true },
+            onCloseSearch = {
+                searchOpen = false
+                viewModel.onQueryChange("") // Reset khi đóng
+            }
         )
         // Hiển thị trạng thái tải (Loading)
         if (isLoading) {
@@ -133,42 +151,55 @@ fun HomeScreen(
             // Có thể thêm nút Thử lại (Retry) ở đây
         } else {
             // Hiển thị dữ liệu
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp)
-                    .padding(bottom = 80.dp)
-                    .navigationBarsPadding()
-            ) {
-                if (bestSellerProducts.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Sách bán chạy",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
-                        )
-                        // Truyền dữ liệu thật đã được lọc
-                        BestSellerCard(
-                            bestSellerBooks = bestSellerProducts,
-                            onBookClick = onBookClick
-                        )
+            if (searchOpen) {
+                // Giao diện hiển thị kết quả tìm kiếm
+                if (searchResults.isEmpty() && searchQuery.isNotEmpty()) {
+                    Text("Không tìm thấy kết quả", modifier = Modifier.padding(16.dp))
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+                        items(searchResults) { book ->
+                            BookSearchItem(book = book, onClick = { onBookClick(book.id) })
+                        }
                     }
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp)
+                        .padding(bottom = 80.dp)
+                        .navigationBarsPadding()
+                ) {
+                    if (bestSellerProducts.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Sách bán chạy",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                            )
+                            // Truyền dữ liệu thật đã được lọc
+                            BestSellerCard(
+                                bestSellerBooks = bestSellerProducts,
+                                onBookClick = onBookClick
+                            )
+                        }
+                    }
 
-                if (recommendedProducts.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "Đề xuất cho bạn",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
-                        )
-                        // Truyền dữ liệu thật đã được lọc
-                        RecommendedList(
-                            recommendedBooks = recommendedProducts,
-                            onBookClick = onBookClick
-                        )
+                    if (recommendedProducts.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Đề xuất cho bạn",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                            )
+                            // Truyền dữ liệu thật đã được lọc
+                            RecommendedList(
+                                recommendedBooks = recommendedProducts,
+                                onBookClick = onBookClick
+                            )
+                        }
                     }
                 }
             }
@@ -178,9 +209,12 @@ fun HomeScreen(
 
 @Composable
 fun HomeHeader(
+    searchOpen: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onProfileClick: () -> Unit,
     onSearchClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onCloseSearch: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -191,24 +225,72 @@ fun HomeHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onProfileClick) {
-            Image(
-                painter = painterResource(R.drawable.profile_holder),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+        if (!searchOpen) {
+            IconButton(onClick = onProfileClick) {
+                Image(
+                    painter = painterResource(R.drawable.profile_holder),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
+                )
+            }
+            Text("Bookstore", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            IconButton(onClick = onSearchClick) {
+                Icon(Icons.Default.Search, null, tint = Color.DarkGray, modifier = Modifier.size(32.dp))
+            }
+        } else {
+            TextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Tìm kiếm sách...", fontSize = 14.sp) },
+                singleLine = true,
+                modifier = Modifier.weight(1f).padding(start = 12.dp).height(50.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(8.dp)
             )
+            IconButton(onClick = onCloseSearch) {
+                Icon(Icons.Default.Close, null, tint = Color.White)
+            }
         }
-        IconButton(onClick = onSearchClick) {
-            Icon(
-                imageVector = Icons.Default.Search,
+    }
+}
+
+@Composable
+fun BookSearchItem(
+    book: HomeUIProduct, // Sử dụng Model của bạn để đồng bộ
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(modifier = Modifier.padding(12.dp)) {
+            AsyncImage(
+                model = book.imageUrl,
                 contentDescription = null,
-                tint = Color.DarkGray,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
             )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(text = book.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+                Text(text = book.authorName, fontSize = 13.sp, color = Color.Gray)
+                Text(
+                    text = book.price.toCurrencyString(),
+                    fontSize = 14.sp,
+                    color = Color(0xFF2E7D32),
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -364,47 +446,3 @@ fun RecommendedList(
         }
     }
 }
-
-//@Preview
-//@Composable
-//fun HomeFragmentPreview(){
-//    val sampleList = listOf(
-//        UI_HomeBestSeller(imageID = R.drawable.book1),
-//        UI_HomeBestSeller(imageID = R.drawable.book2)
-//    )
-//    BestSellerCard(sampleList,
-//        onBookClick = {})
-//}
-//@Preview
-//@Composable
-//fun HomeFragmentPreview2(){
-//    val sampleList = listOf(
-//        UI_HomeRecommend(
-//            author = R.string.book1_author,
-//            price = R.string.book1_price,
-//            name = R.string.book1_name,
-//            imageID = R.drawable.book1,
-//            star = 5f
-//        ),
-//        UI_HomeRecommend(
-//            author = R.string.book2_author,
-//            price = R.string.book2_price,
-//            name = R.string.book2_name,
-//            imageID = R.drawable.book2,
-//            star = 3.5f
-//        )
-//    )
-//    RecommendedList(sampleList,
-//        onBookClick = {})
-//}
-//
-//@Preview (
-//    showBackground = true,
-//    uiMode = Configuration.UI_MODE_NIGHT_NO
-//)
-//@Composable
-//fun HomeFragmentPreview3(){
-//    BookstoreTheme {
-//        HomeScreen(onBookClick = {})
-//    }
-//}

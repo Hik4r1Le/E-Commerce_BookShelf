@@ -26,10 +26,10 @@ class ProductRepository(
         }
     }
 
-    suspend fun getHomeProducts(): Result<HomeProductResponse> {
+    suspend fun getHomeProducts(filter: String? = null): Result<HomeProductResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getHomeProducts()
+                val response = apiService.getHomeProducts(filter)
                 if (response.isSuccessful) {
                     response.body()?.let { Result.success(it) }
                         ?: Result.failure(Exception("Response body is empty"))

@@ -241,7 +241,14 @@ fun OrdersContent(
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(
+                top = 16.dp,
+                bottom = 32.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

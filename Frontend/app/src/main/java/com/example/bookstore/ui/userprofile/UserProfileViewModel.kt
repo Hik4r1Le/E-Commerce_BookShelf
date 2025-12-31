@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.bookstore.model.userprofile.toUIModel
 import com.example.bookstore.model.userprofile.UserProfileUIModel
 import com.example.bookstore.repository.UserProfileRepository
+import com.example.bookstore.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -26,10 +27,14 @@ data class UserProfileUiState(
     val selectedLocalUri: Uri? = null,
     val error: String? = null,
     val phoneError: String? = null,
-    val updateSuccess: Boolean = false
+    val updateSuccess: Boolean = false,
+    val isLoggedOut: Boolean = false
 )
 
-class UserProfileViewModel(private val repository: UserProfileRepository) : ViewModel() {
+class UserProfileViewModel(
+    private val repository: UserProfileRepository,
+    private val authRepository: AuthRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserProfileUiState())
     val uiState: StateFlow<UserProfileUiState> = _uiState
@@ -139,6 +144,13 @@ class UserProfileViewModel(private val repository: UserProfileRepository) : View
             "$year-$month-$day" // Kết quả: 2001-05-10
         } else {
             dob // Hoặc xử lý báo lỗi nếu không đủ ký tự
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            authRepository.logout() // Xóa token qua Repository
+            _uiState.update { it.copy(isLoggedOut = true) }
         }
     }
 }

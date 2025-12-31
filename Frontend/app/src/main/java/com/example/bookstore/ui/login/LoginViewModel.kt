@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.firstOrNull
 
 import com.example.bookstore.model.login.LoginRequest
 import com.example.bookstore.model.login.LoginResponse
@@ -26,6 +27,34 @@ class LoginViewModel(
 
     var loginResponse by mutableStateOf<LoginResponse?>(null)
         private set
+
+    var isCheckingSession by mutableStateOf(true)
+        private set
+
+    var navigateToHome by mutableStateOf(false)
+        private set
+
+    init {
+        checkExistingSession()
+    }
+
+    private fun checkExistingSession() {
+        viewModelScope.launch {
+            // Đọc token từ Flow (lấy giá trị đầu tiên rồi đóng flow)
+            val token = authRepository.getAuthToken().firstOrNull()
+
+            if (!token.isNullOrEmpty()) {
+                // Nếu có token, kích hoạt điều hướng sang Home
+                navigateToHome = true
+            }
+            // Kết thúc quá trình kiểm tra
+            isCheckingSession = false
+        }
+    }
+
+    fun onNavigatedToHome() {
+        navigateToHome = false
+    }
 
     // handle input
     fun onEmailChange(newEmail: String) {

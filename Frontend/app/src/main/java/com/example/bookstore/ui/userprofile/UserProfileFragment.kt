@@ -59,6 +59,12 @@ class UserProfileFragment : Fragment(R.layout.fragment_user_profile) {
                 val context = LocalContext.current
                 var showAvatarPicker by remember { mutableStateOf(false) }
 
+                LaunchedEffect(uiState.isLoggedOut) {
+                    if (uiState.isLoggedOut) {
+                        findNavController().navigate(R.id.action_profile_to_login)
+                    }
+                }
+
                 // Xử lý thông báo thành công
                 LaunchedEffect(uiState.updateSuccess) {
                     if (uiState.updateSuccess) {
@@ -89,7 +95,8 @@ class UserProfileFragment : Fragment(R.layout.fragment_user_profile) {
                             onCityChange = viewModel::onCityChange,
                             onNotificationClick = {
                                 NotificationFragment.open(this@UserProfileFragment)
-                            }
+                            },
+                            onLogoutClick = { viewModel.logout() }
                         )
 
                         if (uiState.isLoading) {
@@ -125,7 +132,8 @@ fun UserProfileScreen(
     onStreetChange: (String) -> Unit,
     onDistrictChange: (String) -> Unit,
     onCityChange: (String) -> Unit,
-    onNotificationClick: () -> Unit
+    onNotificationClick: () -> Unit,
+    onLogoutClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -133,7 +141,7 @@ fun UserProfileScreen(
             .background(Color(0xFFFFF8F3))
             .verticalScroll(rememberScrollState()) // Cho phép cuộn để không bị che nút Lưu
     ) {
-        UserProfileHeader(uiState, onEdit = {}, onPickAvatar, onNotificationClick)
+        UserProfileHeader(uiState, onEdit = {}, onPickAvatar, onNotificationClick, onLogoutClick)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -216,7 +224,8 @@ fun UserProfileHeader(
     uiState: UserProfileUiState,
     onEdit: () -> Unit,
     onPickAvatar: () -> Unit,
-    onNotificationClick: () -> Unit
+    onNotificationClick: () -> Unit,
+    onLogoutClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -315,7 +324,7 @@ fun UserProfileHeader(
                 "Đăng xuất",
                 color = Color.Red,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.clickable { /* Handle logout */ }
+                modifier = Modifier.clickable { onLogoutClick() }
             )
         }
     }

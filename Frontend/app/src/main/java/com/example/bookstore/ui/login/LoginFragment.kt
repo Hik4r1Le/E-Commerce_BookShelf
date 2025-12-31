@@ -122,19 +122,36 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
                     }
                 }
 
-                LoginScreen(
-                    viewModel = viewModel,
-                    onRegisterClick = {
-                        val action = LoginFragmentDirections.actionLoginToRegister()
+                LaunchedEffect(viewModel.navigateToHome) {
+                    if (viewModel.navigateToHome) {
+                        val action = LoginFragmentDirections.actionLoginToHome()
                         findNavController().navigate(action)
-                    },
-                    onForgotPassword = {
-                        val action = LoginFragmentDirections.actionLoginToForgotPassword()
-                        findNavController().navigate(action)
-                    },
-                    onGoogleLogin = { signInWithGoogle() },
-                    onLogin = { viewModel.login() }
-                )
+                        viewModel.onNavigatedToHome()
+                    }
+                }
+
+                if (viewModel.isCheckingSession) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(color = Color(0xFFB0AEE0))
+                    }
+                } else {
+                    LoginScreen(
+                        viewModel = viewModel,
+                        onRegisterClick = {
+                            val action = LoginFragmentDirections.actionLoginToRegister()
+                            findNavController().navigate(action)
+                        },
+                        onForgotPassword = {
+                            val action = LoginFragmentDirections.actionLoginToForgotPassword()
+                            findNavController().navigate(action)
+                        },
+                        onGoogleLogin = { signInWithGoogle() },
+                        onLogin = { viewModel.login() }
+                    )
+                }
             }
         }
     }

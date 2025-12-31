@@ -1,13 +1,85 @@
 package com.example.bookstore.ui.book_detail
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
-class BookDetailViewModel : ViewModel() {
+import com.example.bookstore.repository.CartRepository
+import com.example.bookstore.model.cart.AddToCartRequest
+import com.example.bookstore.repository.ProductRepository
+import com.example.bookstore.model.products.ProductDetailUI
+import com.example.bookstore.model.products.toUIModel
 
-    private val _text = MutableLiveData<String>().apply {
-        value = "This is book detail Fragment"
+class BookDetailViewModel(
+    private val productRepository: ProductRepository,
+    private val cartRepository: CartRepository
+) : ViewModel() {
+    var isLoading by mutableStateOf(false)
+        private set
+    var errorMessage by mutableStateOf<String?>(null)
+        private set
+
+    // Lưu trữ dữ liệu chi tiết sản phẩm
+    var productDetail by mutableStateOf<ProductDetailUI?>(null)
+        private set
+
+    var isAddingToCart by mutableStateOf(false)
+        private set
+
+    // Hàm gọi API lấy chi tiết sản phẩm
+    fun loadProductDetail(productId: String) {
+        if (productDetail != null) return
+
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+
+            val result = productRepository.getProductDetail(productId)
+
+            result.onSuccess { response ->
+                productDetail = response.toUIModel()
+            }.onFailure { e ->
+                errorMessage = e.message
+                productDetail = null
+            }
+
+            isLoading = false
+        }
     }
-    val text: LiveData<String> = _text
+
+    fun addToCart(stockId: String, quantity: Int, priceAtAdd: Double, onSuccess: () -> Unit) {
+        if (isAddingToCart) return
+
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            isAddingToCart = true
+
+            val request = AddToCartRequest(
+                stockId = stockId,
+                quantity = quantity,
+                priceAtAdd = priceAtAdd
+            )
+
+            val result = cartRepository.addToCart(request)
+
+            result.onSuccess {
+                // Xử lý thành công
+                onSuccess()
+            }.onFailure { e ->
+                // Xử lý thất bại
+                errorMessage = e.message
+            }
+
+            isAddingToCart = false
+            isLoading = false
+        }
+    }
+
+    fun clearError() {
+        errorMessage = null
+    }
 }

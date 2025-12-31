@@ -3,40 +3,185 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/navigation_home">
+    app:startDestination="@+id/navigation_login">
 
+    <!--  Navigation Home UI  -->
     <fragment
         android:id="@+id/navigation_home"
         android:name="com.example.bookstore.ui.home.HomeFragment"
         android:label="@string/title_home"
-        tools:layout="@layout/fragment_home" />
-    <action
-        android:id="@+id/home_to_bookDetail"
-        app:destination="@id/navigation_book_detail" />
+        tools:layout="@layout/fragment_home">
 
+        <action
+            android:id="@+id/action_home_to_bookDetail"
+            app:destination="@id/navigation_book_detail" />
+    </fragment>
+
+    <!--  Navigation Cart UI  -->
     <fragment
         android:id="@+id/navigation_cart"
         android:name="com.example.bookstore.ui.cart.CartFragment"
         android:label="@string/title_cart"
-        tools:layout="@layout/fragment_cart" />
+        tools:layout="@layout/fragment_cart" >
 
+        <action
+            android:id="@+id/action_cart_to_checkout"
+            app:destination="@id/navigation_checkout" />
+    </fragment>
 
+    <!--  Navigation Checkout UI  -->
     <fragment
-        android:id="@+id/navigation_orders"
-        android:name="com.example.bookstore.ui.orders.OrdersFragment"
-        android:label="@string/title_orders"
-        tools:layout="@layout/fragment_orders" />
+        android:id="@+id/navigation_checkout"
+        android:name="com.example.bookstore.ui.checkout.CheckoutFragment"
+        android:label="Checkout"
+        tools:layout="@layout/fragment_checkout" >
 
+        <argument
+            android:name="cartItemIds"
+            app:argType="string[]" />
+
+        <action
+            android:id="@+id/action_checkout_to_order"
+            app:destination="@id/navigation_order"
+            app:popUpTo="@id/navigation_cart"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+
+    <!--  Navigation Order UI  -->
+    <fragment
+        android:id="@+id/navigation_order"
+        android:name="com.example.bookstore.ui.order.OrderFragment"
+        android:label="@string/title_orders"
+        tools:layout="@layout/fragment_order" />
+
+    <!--  Navigation User Profile UI  -->
     <fragment
         android:id="@+id/navigation_profile"
-        android:name="com.example.bookstore.ui.profile.ProfileFragment"
+        android:name="com.example.bookstore.ui.userprofile.UserProfileFragment"
         android:label="@string/title_profile"
-        tools:layout="@layout/fragment_profile" />
+        tools:layout="@layout/fragment_user_profile" >
 
+        <action
+            android:id="@+id/action_profile_to_login"
+            app:destination="@id/navigation_login"
+            app:popUpTo="@id/mobile_navigation"
+            app:popUpToInclusive="true" />
+
+    </fragment>
+
+    <!--  Navigation Book Detail UI  -->
     <fragment
         android:id="@+id/navigation_book_detail"
         android:name="com.example.bookstore.ui.book_detail.BookDetailFragment"
         android:label="Book Detail"
-        tools:layout="@layout/fragment_book_detail" />
+        tools:layout="@layout/fragment_book_detail">
 
+        <argument
+            android:name="productId"
+            app:argType="string"
+            android:defaultValue="default_book_id" />
+
+        <action
+            android:id="@+id/action_bookDetail_to_cart"
+            app:destination="@id/navigation_cart"
+            app:popUpTo="@id/navigation_book_detail"
+            app:popUpToInclusive="false" />
+
+    </fragment>
+
+    <!--  Navigation OTP UI  -->
+    <fragment
+        android:id="@+id/navigation_otp"
+        android:name="com.example.bookstore.ui.otp.OtpFragment"
+        android:label="OTP Verification"
+        tools:layout="@layout/fragment_otp">
+
+        <argument
+            android:name="email"
+            app:argType="string" />
+
+        <argument
+            android:name="otpType"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_otp_to_resetPassword"
+            app:destination="@id/navigation_reset_password"
+            app:popUpTo="@id/navigation_forgot_password"
+            app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_otp_to_login"
+            app:destination="@id/navigation_login"
+            app:popUpTo="@id/navigation_register"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!--  Navigation Forgot Password UI  -->
+    <fragment
+        android:id="@+id/navigation_forgot_password"
+        android:name="com.example.bookstore.ui.forgot_password.ForgotPasswordFragment"
+        android:label="Forgot Password"
+        tools:layout="@layout/fragment_forgot_password">
+
+        <action
+            android:id="@+id/action_forgotPassword_to_otp"
+            app:destination="@id/navigation_otp" />
+    </fragment>
+
+    <!--  Navigation Login UI  -->
+    <fragment
+        android:id="@+id/navigation_login"
+        android:name="com.example.bookstore.ui.login.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login">
+
+        <action
+            android:id="@+id/action_login_to_home"
+            app:destination="@id/navigation_home"
+            app:popUpTo="@id/navigation_login"
+            app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/navigation_register" />
+
+        <action
+            android:id="@+id/action_login_to_forgot_password"
+            app:destination="@id/navigation_forgot_password" />
+    </fragment>
+
+    <!--  Navigation Register UI  -->
+    <fragment
+        android:id="@+id/navigation_register"
+        android:name="com.example.bookstore.ui.register.RegisterFragment"
+        android:label="Register"
+        tools:layout="@layout/fragment_register">
+
+        <action
+            android:id="@+id/action_register_to_otp"
+            app:destination="@id/navigation_otp" />
+
+        <action
+            android:id="@+id/action_register_to_login"
+            app:destination="@id/navigation_login"
+            app:popUpTo="@id/navigation_register"
+            app:popUpToInclusive="true" />
+
+    </fragment>
+
+    <!--  Navigation Reset Password UI  -->
+    <fragment
+        android:id="@+id/navigation_reset_password"
+        android:name="com.example.bookstore.ui.reset_password.ResetPasswordFragment"
+        android:label="Reset Password"
+        tools:layout="@layout/fragment_reset_password">
+
+        <action
+            android:id="@+id/action_resetPassword_to_login"
+            app:destination="@id/navigation_login"
+            app:popUpTo="@id/navigation_reset_password"
+            app:popUpToInclusive="true" />
+    </fragment>
 </navigation>

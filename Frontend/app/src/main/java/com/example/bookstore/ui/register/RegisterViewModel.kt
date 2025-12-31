@@ -2,47 +2,114 @@ package com.example.bookstore.ui.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookstore.model.RegisterCredentials
-import com.example.bookstore.model.RegisterUiState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 
-class RegisterViewModel : ViewModel() {
+import com.example.bookstore.model.register.RegisterRequest
+import com.example.bookstore.model.register.RegisterResponse
+import com.example.bookstore.repository.AuthRepository
 
-    private val _uiState = MutableStateFlow(RegisterUiState())
-    val uiState: StateFlow<RegisterUiState> = _uiState
+data class RegisterCredentials(
+    val username: String = "",
+    val email: String = "",
+    val password: String = "",
+    val confirmPassword: String = ""
+)
 
-    private var _credentials = RegisterCredentials()
+data class RegisterUiState(
+    val credentials: RegisterCredentials = RegisterCredentials(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val registerResponse: RegisterResponse? = null
+)
 
-    fun updateCredentials(credentials: RegisterCredentials) {
-        _credentials = credentials
+// ViewModel
+class RegisterViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
+    private val _uiState = mutableStateOf(RegisterUiState())
+    val uiState: State<RegisterUiState> = _uiState
+
+
+    fun updateCredentials(newCredentials: RegisterCredentials) {
+        _uiState.value = _uiState.value.copy(credentials = newCredentials, errorMessage = null)
     }
 
-    fun register(onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+    fun onEmailChange(newEmail: String) {
+        _uiState.value = _uiState.value.copy(
+            credentials = _uiState.value.credentials.copy(email = newEmail),
+            errorMessage = null
+        )
+    }
 
-            // Kiểm tra dữ liệu nhập
-            if (_credentials.username.isBlank() ||
-                _credentials.fullname.isBlank() ||
-                _credentials.email.isBlank() ||
-                _credentials.password.isBlank() ||
-                _credentials.confirmPassword.isBlank()
-            ) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Vui lòng điền đầy đủ thông tin") }
-                return@launch
-            }
+    fun onUsernameChange(newUsername: String) {
+        _uiState.value = _uiState.value.copy(
+            credentials = _uiState.value.credentials.copy(username = newUsername),
+            errorMessage = null
+        )
+    }
 
-            if (_credentials.password != _credentials.confirmPassword) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Mật khẩu không khớp") }
-                return@launch
-            }
+    fun onPasswordChange(newPassword: String) {
+        _uiState.value = _uiState.value.copy(
+            credentials = _uiState.value.credentials.copy(password = newPassword),
+            errorMessage = null
+        )
+    }
 
-            // Giả lập đăng ký thành công
-            _uiState.update { it.copy(isLoading = false, errorMessage = null) }
-            onSuccess()
+    fun onConfirmPasswordChange(newConfirmPassword: String) {
+        _uiState.value = _uiState.value.copy(
+            credentials = _uiState.value.credentials.copy(confirmPassword = newConfirmPassword),
+            errorMessage = null
+        )
+    }
+
+    fun register(onSuccess: (String) -> Unit) {
+        val credentials = _uiState.value.credentials
+
+        // 1. Validation
+        val validationError = validate(credentials)
+        if (validationError != null) {
+            _uiState.value = _uiState.value.copy(errorMessage = validationError)
+            return
         }
+
+        // 2. Gọi API
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+            // Chuyển đổi từ UI Credentials sang API Request Model
+            val apiRequest = RegisterRequest(
+                email = credentials.email,
+                username = credentials.username,
+                password = credentials.password
+            )
+
+            val result = authRepository.register(apiRequest)
+            result.onSuccess { response ->
+                _uiState.value = _uiState.value.copy(registerResponse = response)
+                onSuccess(credentials.email)
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(errorMessage = e.message)
+            }
+
+            _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
+
+    // Logic kiểm tra dữ liệu đầu vào
+    private fun validate(credentials: RegisterCredentials): String? {
+        if (credentials.username.isBlank()) return "Vui lòng nhập tên tài khoản."
+        if (credentials.email.isBlank()) return "Vui lòng nhập email."
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(credentials.email).matches()) return "Email không hợp lệ."
+        if (credentials.password.isBlank()) return "Vui lòng nhập mật khẩu."
+        if (credentials.password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự."
+        if (credentials.confirmPassword.isBlank()) return "Vui lòng nhập lại mật khẩu xác nhận."
+        if (credentials.password != credentials.confirmPassword) return "Mật khẩu xác nhận không khớp."
+        return null
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 }

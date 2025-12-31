@@ -14,4 +14,8 @@
     <string name="book2_name">Sach gi do, no idea</string>
     <string name="book2_author">chiu day</string>
     <string name="book2_price">123,456</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="google_client_id">860634028203-12ccbd19fqbferrn12oiufdeg56n1mf7.apps.googleusercontent.com</string>
 </resources>

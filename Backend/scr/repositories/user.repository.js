@@ -1,26 +1,16 @@
 import { prisma } from "../config/prisma.config.js"
-import OtpModel from "../models/mongodb/otp.model.js";
+import { queryBuilder } from "../utils/query.util.js";
 
-class UserRepository {
-    async findUser(filter, select = null) {
-        return await prisma.User.findUnique({
-            where: filter,
-            select
-        });
-    }
+export const findUser = async (filter, option) =>
+    await prisma.user.findUnique(queryBuilder(filter, option));
 
-    async createUser(userData) {
-        return await prisma.User.create({
-            data: userData
-        });
-    }
+export const findManyUser = async (filter, option, orderBy, skip, take) =>
+    await prisma.user.findMany(queryBuilder(filter, option, null, orderBy, skip, take));
 
-    async updateUser(filter, userData) {
-        return await prisma.User.update({
-            where: filter,
-            data: userData
-        });
-    }
-}
+export const createUser = async (data, option) =>
+    await prisma.user.create(queryBuilder(null, option, data));
 
-export default new UserRepository();
+export const updateUser = async (filter, option, data) =>
+    await prisma.user.update(queryBuilder(filter, option, data));
+
+

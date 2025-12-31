@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const bannerSchema = new mongoose.Schema(
   {
-    product_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    product_ids: [{ type: String, ref: "Product" }],
     name: { type: String, required: true },
     title: { type: String },
     description: { type: String },

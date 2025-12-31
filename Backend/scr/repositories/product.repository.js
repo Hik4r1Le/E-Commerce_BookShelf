@@ -1,104 +1,12 @@
-import ProductModel from "../models/mongodb/product.model.js"
-import reviewModel from "../models/mongodb/review.model.js";
-import ReviewModel from "../models/mongodb/review.model.js"
+import { prisma } from "../config/prisma.config.js"
+import { queryBuilder } from "../utils/query.util.js";
 
-class ProductRepository {
-    async findProductsForHome(productViewFields, filter, sort, skip, limit) {
-        const pipeline = [
-            {
-                $lookup: {
-                    from: "books",
-                    localField: "book_id",
-                    foreignField: "_id",
-                    as: "book"
-                },
-            },
-            { $unwind: "$book" },
+export const findManyProduct = async (filter, option, orderBy, skip, take) =>
+    await prisma.productCategory.findMany(queryBuilder(filter, option, null, orderBy, skip, take));
 
-            {
-                $addFields: {
-                    "book.category_object_ids": {
-                        $map: {
-                            input: "$book.category_ids",
-                            as: "catId",
-                            in: { $toObjectId: "$$catId" }
-                        }
-                    }
-                }
-            },
+export const findProduct = async (filter, option) =>
+    await prisma.productCategory.findUnique(queryBuilder(filter, option));
 
-            {
-                $lookup: {
-                    from: "categories",
-                    localField: "book.category_object_ids",
-                    foreignField: "_id",
-                    as: "categories"
-                }
-            },
+export const countProduct = async (filter) =>
+    await prisma.productCategory.count(queryBuilder(filter));
 
-            { $match: filter },
-            { $sort: sort },
-            { $skip: skip },
-            { $limit: limit },
-
-            productViewFields,
-        ];
-
-        return await ProductModel.aggregate(pipeline);
-    }
-
-    async findProductDetail(productViewFields, filter, sort, skip, limit) {
-        const pipeline = [
-            {
-                $lookup: {
-                    from: "books",
-                    localField: "book_id",
-                    foreignField: "_id",
-                    as: "book"
-                },
-            },
-            { $unwind: "$book" },
-
-            {
-                $addFields: {
-                    "book.category_object_ids": {
-                        $map: {
-                            input: "$book.category_ids",
-                            as: "catId",
-                            in: { $toObjectId: "$$catId" }
-                        }
-                    }
-                }
-            },
-
-            {
-                $lookup: {
-                    from: "categories",
-                    localField: "book.category_object_ids",
-                    foreignField: "_id",
-                    as: "categories"
-                }
-            },
-
-            {
-                $lookup: {
-                    from: "reviews",
-                    localField: "_id",
-                    foreignField: "product_id",
-                    as: "reviews"
-                }
-            },
-
-            { $match: filter },
-            { $sort: sort },
-            { $skip: skip },
-            { $limit: limit },
-
-            productViewFields,
-        ];
-
-        return await ProductModel.aggregate(pipeline);
-    }
-}
-
-export default new ProductRepository();

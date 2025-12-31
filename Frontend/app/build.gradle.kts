@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -18,6 +20,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +36,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -57,6 +72,7 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.legacy.support.v4)
 
     // Testing
     testImplementation(libs.junit)
@@ -71,18 +87,36 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+// For using Compose in Fragments/Activities
     implementation("androidx.activity:activity-compose")
     implementation("androidx.fragment:fragment-ktx")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.9.5")
 
-    // **Thêm DataStore Preferences**
+// (Optional) Compose Navigation, if later you want pure Compose navigation
+    implementation("androidx.navigation:navigation-compose:2.9.5")
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // Dùng để cho phép Retrofit sử dụng Gson để chuyển đổi JSON
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+
+    // Thư viện Coroutines Test cho môi trường Unit Test
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    // DataStore Preferences
     implementation("androidx.datastore:datastore-preferences:1.1.0")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // **Thêm Gson**
+    // Gson
     implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
+    
+    // Coroutine support
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

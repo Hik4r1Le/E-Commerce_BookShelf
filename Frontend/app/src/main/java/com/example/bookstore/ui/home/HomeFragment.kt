@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,8 +40,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.example.bookstore.R
-import com.example.bookstore.model.UI_HomeBestSeller
-import com.example.bookstore.model.UI_HomeRecommend
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -49,25 +48,30 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
+import androidx.navigation.fragment.findNavController
+import com.example.bookstore.ui.theme.BookstoreTheme
+import androidx.fragment.app.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import com.example.bookstore.model.products.HomeUIProduct
+import coil.compose.AsyncImage
+import java.text.NumberFormat
+import java.util.Locale
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.fragment.findNavController
-import coil.compose.AsyncImage
-import com.example.bookstore.data.UI_HomeBestSeller_data
-import com.example.bookstore.data.UI_HomeRecommend_data
-import com.example.bookstore.model.SearchResult
-import com.example.bookstore.ui.theme.BookstoreTheme
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
+    private val viewModel: HomeViewModel by viewModels {
+        HomeViewModelFactory(requireContext())
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -75,9 +79,16 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setContent {
             BookstoreTheme {
+                // Tự động gọi API khi Composable được tạo lần đầu
+                LaunchedEffect(key1 = Unit) {
+                    viewModel.loadHomeProducts()
+                }
+
                 HomeScreen(
-                    onBookClick = {
-                        findNavController().navigate(R.id.home_to_bookDetail)
+                    viewModel = viewModel,
+                    onBookClick = { productId ->
+                        val action = HomeFragmentDirections.actionHomeToBookDetail(productId)
+                        findNavController().navigate(action)
                     }
                 )
             }
@@ -85,76 +96,111 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 }
 
+// HÀM EXTENSION ĐỊNH DẠNG TIỀN TỆ
+fun Double.toCurrencyString(): String {
+    val formatter = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
+    return formatter.format(this).replace("₫", "VNĐ")
+}
+
 @Composable
-fun HomeScreen(onBookClick: () -> Unit,
-               viewModel: HomeViewModel = viewModel()) {
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onBookClick: (String) -> Unit
+) {
+    // Trích xuất trạng thái từ ViewModel
+    val products = viewModel.products
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
+
     var searchOpen by remember { mutableStateOf(false) }
-    val searchResults by viewModel.searchResults.collectAsState()
-    Column(
-        modifier = Modifier
-            //.padding(16.dp)
-            .fillMaxSize(),
+    val searchResults = viewModel.searchResults
+    val searchQuery = viewModel.searchQuery
+
+    // Phân loại sản phẩm (Ví dụ: Best Seller là những sản phẩm có tag "best_seller")
+    val bestSellerProducts = products.filter { it.isBestSeller }
+    val recommendedProducts = products.filter { !it.isBestSeller }
+
+    Column(modifier = Modifier
+        //.padding(16.dp)
+        .fillMaxSize(),
         horizontalAlignment = Alignment.Start
     ) {
         HomeHeader(
             searchOpen = searchOpen,
-            onProfileClick = {},
+            searchQuery = searchQuery,
+            onSearchQueryChange = { viewModel.onQueryChange(it) },
+            onProfileClick = { /* Điều hướng profile */ },
             onSearchClick = { searchOpen = true },
             onCloseSearch = {
                 searchOpen = false
-                viewModel.onQueryChange("") // reset search
-            },
-            viewModel = viewModel
-            //modifier = Modifier.weight(1f)
+                viewModel.onQueryChange("") // Reset khi đóng
+            }
         )
-        if (searchOpen) {
-            if (searchResults.isEmpty()) {
-                Text(
-                    text = "No results found",
-                    modifier = Modifier.padding(16.dp)
-                )
-            } else {
-                LazyColumn {
-                    items(searchResults) { book ->
-                        BookSearchItem(
-                            book = book,
-                            onClick = {
-                                // later: navigate to detail
-                            }
-                        )
+        // Hiển thị trạng thái tải (Loading)
+        if (isLoading) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                Text("Đang tải dữ liệu...", modifier = Modifier.padding(top = 16.dp))
+            }
+        } else if (errorMessage != null) {
+            Text("Lỗi: $errorMessage", color = Color.Red, modifier = Modifier.padding(16.dp))
+            // Có thể thêm nút Thử lại (Retry) ở đây
+        } else {
+            // Hiển thị dữ liệu
+            if (searchOpen) {
+                // Giao diện hiển thị kết quả tìm kiếm
+                if (searchResults.isEmpty() && searchQuery.isNotEmpty()) {
+                    Text("Không tìm thấy kết quả", modifier = Modifier.padding(16.dp))
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+                        items(searchResults) { book ->
+                            BookSearchItem(book = book, onClick = { onBookClick(book.id) })
+                        }
                     }
                 }
-            }
-        }else {
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp)
+                        .padding(bottom = 80.dp)
+                        .navigationBarsPadding()
+                ) {
+                    if (bestSellerProducts.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Sách bán chạy",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                            )
+                            // Truyền dữ liệu thật đã được lọc
+                            BestSellerCard(
+                                bestSellerBooks = bestSellerProducts,
+                                onBookClick = onBookClick
+                            )
+                        }
+                    }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp)
-            ) {
-                item {
-                    Text(
-                        text = "Sách bán chạy",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
-                    )
-                    BestSellerCard(
-                        bestSellerBooks = UI_HomeBestSeller_data().loadData(),
-                        onBookClick = onBookClick
-                    )
-                }
-                item {
-                    Text(
-                        text = "Đề xuất cho bạn",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
-                    )
-                    RecommendedList(
-                        recommendedBooks = UI_HomeRecommend_data().loadData(),
-                        onBookClick = onBookClick
-                    )
+                    if (recommendedProducts.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Đề xuất cho bạn",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 20.dp, bottom = 20.dp, start = 12.dp),
+                            )
+                            // Truyền dữ liệu thật đã được lọc
+                            RecommendedList(
+                                recommendedBooks = recommendedProducts,
+                                onBookClick = onBookClick
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -164,13 +210,12 @@ fun HomeScreen(onBookClick: () -> Unit,
 @Composable
 fun HomeHeader(
     searchOpen: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onProfileClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onCloseSearch: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: HomeViewModel
+    onCloseSearch: () -> Unit
 ) {
-    val query by viewModel.query.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,51 +230,65 @@ fun HomeHeader(
                 Image(
                     painter = painterResource(R.drawable.profile_holder),
                     contentDescription = null,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
+                    modifier = Modifier.size(48.dp).clip(CircleShape)
                 )
             }
+            Text("Bookstore", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             IconButton(onClick = onSearchClick) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    tint = Color.DarkGray,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                )
+                Icon(Icons.Default.Search, null, tint = Color.DarkGray, modifier = Modifier.size(32.dp))
             }
         } else {
             TextField(
-                value = query,
-                onValueChange = viewModel::onQueryChange,
-                placeholder = {
-                    Text(
-                        text = "Search books…",
-                        fontSize = 12.sp
-                    )
-                },
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontSize = 12.sp
-                ),
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Tìm kiếm sách...", fontSize = 14.sp) },
                 singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
+                modifier = Modifier.weight(1f).padding(start = 12.dp).height(50.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
-                    disabledContainerColor = Color.White,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
-                )
+                ),
+                shape = RoundedCornerShape(8.dp)
             )
-
             IconButton(onClick = onCloseSearch) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close search"
+                Icon(Icons.Default.Close, null, tint = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
+fun BookSearchItem(
+    book: HomeUIProduct, // Sử dụng Model của bạn để đồng bộ
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(modifier = Modifier.padding(12.dp)) {
+            AsyncImage(
+                model = book.imageUrl,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(text = book.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, maxLines = 1)
+                Text(text = book.authorName, fontSize = 13.sp, color = Color.Gray)
+                Text(
+                    text = book.price.toCurrencyString(),
+                    fontSize = 14.sp,
+                    color = Color(0xFF2E7D32),
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -238,8 +297,8 @@ fun HomeHeader(
 
 @Composable
 fun BestSellerCard(
-    bestSellerBooks: List<UI_HomeBestSeller>,
-    onBookClick: () -> Unit,
+    bestSellerBooks: List<HomeUIProduct>,
+    onBookClick: (String) -> Unit,
     modifier: Modifier = Modifier) {
     Card(modifier = modifier
         .fillMaxWidth()
@@ -248,8 +307,7 @@ fun BestSellerCard(
             width = 4.dp,
             shape = RoundedCornerShape(12.dp),
             color = Color(color = 0xFFF2AEBB)
-        )
-        .clickable { onBookClick() },
+        ),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4))
     ) {
         LazyRow(
@@ -259,13 +317,15 @@ fun BestSellerCard(
                 .padding(top = 20.dp)
         ) {
             items(bestSellerBooks) { book -> //as best seller
-                Image(
-                    painter = painterResource(book.imageID),
-                    contentDescription = null,
+                AsyncImage(
+                    model = book.imageUrl, // URL ảnh từ API
+                    contentDescription = book.name,
                     modifier = modifier
                         .width(100.dp)
-                        .height(140.dp),
-                    contentScale = ContentScale.Crop
+                        .height(140.dp)
+                        .clickable { onBookClick(book.id) },
+                    contentScale = ContentScale.Crop,
+                    // Có thể thêm Placeholder và Error Image ở đây nếu cần
                 )
             }
         }
@@ -273,9 +333,11 @@ fun BestSellerCard(
 }
 
 @Composable
-fun RecommendedCard(recommend: UI_HomeRecommend,
-                    onBookClick: () -> Unit,
-                    modifier: Modifier = Modifier) {
+fun RecommendedCard(
+    recommend: HomeUIProduct,
+    onBookClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(modifier = modifier
         .fillMaxWidth()
         .height(180.dp)
@@ -284,21 +346,20 @@ fun RecommendedCard(recommend: UI_HomeRecommend,
             shape = RoundedCornerShape(12.dp),
             color = Color(color = 0xFFF2AEBB)
         )
-        .clickable { onBookClick() },
+        .clickable { onBookClick(recommend.id) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4))
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                painter = painterResource(recommend.imageID),
-                contentDescription = null,
-                modifier = Modifier
-                    .weight(1f)
+            AsyncImage(
+                model = recommend.imageUrl, // URL ảnh
+                contentDescription = recommend.name,
+                modifier = Modifier.weight(1f)
                     .width(100.dp)
                     .height(140.dp)
                     .padding(start = 8.dp),
-
+                contentScale = ContentScale.Crop
             )
             Column(modifier = Modifier
                 .weight(2f)
@@ -308,32 +369,39 @@ fun RecommendedCard(recommend: UI_HomeRecommend,
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
-                    text = stringResource(recommend.name),
+                    text = recommend.name,
                     modifier = Modifier.padding(8.dp),
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
                     maxLines = 1
                 )
                 Text(
-                    text = stringResource(recommend.author),
+                    text = recommend.authorName,
                     modifier = Modifier.padding(8.dp),
                     fontWeight = FontWeight.Light,
                     fontSize = 16.sp
                 )
                 Text(
-                    text = stringResource(recommend.price),
+                    text = recommend.price.toCurrencyString(),
                     modifier = Modifier.padding(8.dp),
                     color = Color.Red,
                     fontSize = 16.sp
                 )
                 Row (horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(8.dp)) {
-                    for (i in 1..5) {
-                        val starValue = recommend.star - (i - 1)
-                        DisplayStar(starValue)
-                    }
+                    RatingBar(rating = recommend.ratingAvg.toFloat())
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun RatingBar(rating: Float, maxStars: Int = 5) {
+    Row {
+        for (i in 1..maxStars) {
+            val starValue = rating - (i - 1)
+            DisplayStar(starValue)
         }
     }
 }
@@ -362,9 +430,11 @@ fun DisplayStar(star: Float) {
 }
 
 @Composable
-fun RecommendedList(recommendedBooks: List<UI_HomeRecommend>,
-                    onBookClick: () -> Unit,
-                    modifier: Modifier = Modifier) {
+fun RecommendedList(
+    recommendedBooks: List<HomeUIProduct>,
+    onBookClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -374,108 +444,5 @@ fun RecommendedList(recommendedBooks: List<UI_HomeRecommend>,
                 onBookClick = onBookClick
                 )
         }
-    }
-}
-
-@Composable
-fun BookSearchItem(
-    book: SearchResult,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(4.dp),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp)
-        ) {
-
-            AsyncImage(
-                model = book.image_url,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(
-                    text = book.name ?: "Unknown title",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = book.author_name ?: "",
-                    fontSize = 13.sp,
-                    color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = book.price?.let { "$it đ" } ?: "",
-                    fontSize = 14.sp,
-                    color = Color(0xFF2E7D32)
-                )
-            }
-        }
-    }
-}
-
-
-
-@Preview
-@Composable
-fun HomeFragmentPreview(){
-    val sampleList = listOf(
-        UI_HomeBestSeller(imageID = R.drawable.book1),
-        UI_HomeBestSeller(imageID = R.drawable.book2)
-    )
-    BestSellerCard(sampleList,
-        onBookClick = {})
-}
-@Preview
-@Composable
-fun HomeFragmentPreview2(){
-    val sampleList = listOf(
-        UI_HomeRecommend(
-            author = R.string.book1_author,
-            price = R.string.book1_price,
-            name = R.string.book1_name,
-            imageID = R.drawable.book1,
-            star = 5f
-        ),
-        UI_HomeRecommend(
-            author = R.string.book2_author,
-            price = R.string.book2_price,
-            name = R.string.book2_name,
-            imageID = R.drawable.book2,
-            star = 3.5f
-        )
-    )
-    RecommendedList(sampleList,
-        onBookClick = {})
-}
-
-@Preview (
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_NO
-)
-@Composable
-fun HomeFragmentPreview3(){
-    BookstoreTheme {
-        HomeScreen(onBookClick = {})
     }
 }

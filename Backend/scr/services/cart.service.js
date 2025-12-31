@@ -1,39 +1,69 @@
-import CartRepo from "../repositories/cart.repository.js";
-import StockRepo from "../repositories/stock.repository.js"
-import QueryBuilder from "../utils/queryBuilder.util.js"
+import { findManyCart, findCart, createCart, updateCart, deleteCart, deleteManyCart } from "../repositories/cart.repository.js";
 
-class CartService {
-    async getCartByUserId(userId) {
-        const carts = await CartRepo.findAllCartDetail(userId);
-        if (!carts || carts.length === 0) return await CartRepo.createCartForUser(userId);
-        return carts;
-    }
+export const findCartByUserId = async (userId) =>
+    await findManyCart(
+        { user_id: userId },
+        {
+            id: true,
+            quantity: true,
+            price_at_add: true,
+            stock: {
+                select: {
+                    id: true,
+                    product: {
+                        select: {
+                            id: true,
+                            name: true,
+                            author_name: true,
+                            image_url: true,
+                            price: true,
+                            discount: true,
+                            productCategory: {
+                                select: {
+                                    category: {
+                                        select: {
+                                            name: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    );
 
-    async addCartDetail(userId, cartInfo) {
-        const data = QueryBuilder.buildQueryForCartDetail(cartInfo);
-        const { product_id } = cartInfo;
-        const stock = await StockRepo.findStock({ product_id });
-        const cart = await CartRepo.findCartByUserId(userId);
+export const createCartDetail = async (userId, stock_id, quantity, price_at_add) =>
+    await createCart(
+        {
+            user_id: userId,
+            stock_id,
+            quantity,
+            price_at_add
+        }
+    );
 
-        return await CartRepo.createCartDetail({
-            ...data,
-            cart_id: cart?.id,
-            stock_id: stock?.id,
-        });
-    }
+export const updateCartDetail = async (userId, cartId, quantity, price_at_add) =>
+    await updateCart(
+        {
+            user_id: userId,
+            id: cartId
+        },
+        {
+            quantity,
+            price_at_add
+        }
+    );
 
-    async updateCartDetail(userId, cartInfo, cart_detail_id) {
-        const data = QueryBuilder.buildQueryForCartDetail(cartInfo);
-        return await CartRepo.updateCartDetail(userId, cart_detail_id, data);
-    }
+export const deleteCartDetail = async (userId, cartId) =>
+    await deleteCart({
+        user_id: userId,
+        id: cartId
+    });
 
-    async deleteCartDetail(userId, cart_detail_id) {
-        return await CartRepo.deleteCartDetail(userId, cart_detail_id);
-    }
+export const deleteManyCartDetail = async (userId) =>
+    await deleteManyCart({
+        user_id: userId
+    });
 
-    async deleteAllCartDetail(userId) {
-        return await CartRepo.deleteAllCartDetail(userId);
-    }
-}
-
-export default new CartService();

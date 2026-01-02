@@ -6,6 +6,8 @@ import com.example.bookstore.R
 import com.example.bookstore.model.SellerProduct
 import com.example.bookstore.model.Order
 import com.example.bookstore.model.OrderProduct
+import android.net.Uri
+
 
 class SellerPanelViewModel : ViewModel() {
 
@@ -22,7 +24,7 @@ class SellerPanelViewModel : ViewModel() {
             "99.000đ",
             "Còn hàng",
             50,
-            R.drawable.book6
+            null
         ),
         SellerProduct(
             "Cho tôi xin một vé đi tuổi thơ",
@@ -30,7 +32,7 @@ class SellerPanelViewModel : ViewModel() {
             "69.000đ",
             "Hết hàng",
             0,
-            R.drawable.book7
+            null
         )
     )
 

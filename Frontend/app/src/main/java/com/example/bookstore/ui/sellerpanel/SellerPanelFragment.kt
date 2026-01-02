@@ -1,5 +1,6 @@
 package com.example.bookstore.ui.sellerpanel
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.bookstore.R
 import com.example.bookstore.model.SellerProduct
 import com.example.bookstore.model.Order
@@ -209,7 +211,10 @@ fun ProductCard(product: SellerProduct) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                painter = painterResource(product.imageRes),
+                //painter = painterResource(product.imageRes),
+                painter = rememberAsyncImagePainter(
+                    model = product.imageUri ?: R.drawable.book6
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .width(90.dp)
@@ -247,10 +252,17 @@ fun AddProductDialog(
     var author by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var imageRes by remember { mutableStateOf(R.drawable.book6) }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+
+//    val launcher = rememberLauncherForActivityResult(
+//        ActivityResultContracts.GetContent()
+//    ) { imageRes = R.drawable.book6 }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { imageRes = R.drawable.book6 }
+    ) { uri ->
+        imageUri = uri
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -258,8 +270,12 @@ fun AddProductDialog(
             TextButton(onClick = {
                 onAdd(
                     SellerProduct(
-                        title, author, price,
-                        "Còn hàng", 1, imageRes
+                        title = title,
+                        author = author,
+                        price = price,
+                        status = "Còn hàng",
+                        quantity = 1,
+                        imageUri = imageUri
                     )
                 )
             }) {
@@ -440,8 +456,8 @@ fun Preview_Product_Tab() {
         SellerTabBar(selected = 0) {}
         ProductSection(
             listOf(
-                SellerProduct("Muôn kiếp nhân sinh", "Nguyên Phong", "99.000đ", "Còn hàng", 50, R.drawable.book6),
-                SellerProduct("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", "Hết hàng", 0, R.drawable.book7)
+                SellerProduct("Muôn kiếp nhân sinh", "Nguyên Phong", "99.000đ", "Còn hàng", 50, null),
+                SellerProduct("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", "Hết hàng", 0, null)
             )
         ) {}
     }
@@ -455,8 +471,8 @@ fun Preview_Header_Product_Tab() {
         SellerTabBar(selected = 0) {}
         ProductSection(
             listOf(
-                SellerProduct("Muôn kiếp nhân sinh", "Nguyên Phong", "99.000đ", "Còn hàng", 50, R.drawable.book6),
-                SellerProduct("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", "Hết hàng", 0, R.drawable.book7)
+                SellerProduct("Muôn kiếp nhân sinh", "Nguyên Phong", "99.000đ", "Còn hàng", 50, null),
+                SellerProduct("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", "Hết hàng", 0, null)
             )
         ) {}
     }

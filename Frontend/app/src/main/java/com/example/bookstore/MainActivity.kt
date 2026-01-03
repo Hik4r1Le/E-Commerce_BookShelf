@@ -20,7 +20,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val navView: BottomNavigationView = binding.navView
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        //val navController = findNavController(R.id.nav_host_fragment_activity_main)
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main)
+                as androidx.navigation.fragment.NavHostFragment
+        val navController = navHostFragment.navController
 
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.

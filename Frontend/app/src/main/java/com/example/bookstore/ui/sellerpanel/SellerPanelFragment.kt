@@ -329,9 +329,10 @@ fun OrderSection(
             items(orders.size) { index ->
                 val buttonText =
                     if (orders[index].id == "002") "Xác nhận" else "Đã giao"
+
                 OrderCard(
                     order = orders[index],
-                    buttonText = buttonText,
+                    //buttonText = buttonText,
                     onUpdateStatus = onUpdateStatus
                 )
             }
@@ -342,10 +343,10 @@ fun OrderSection(
 @Composable
 fun OrderCard(
     order: Order,
-    buttonText: String,
     onUpdateStatus: (String, String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    val nextStatus = nextOrderStatus(order.status)
+    val buttonText = actionLabel(order.status)
 
     Card(
         modifier = Modifier
@@ -355,16 +356,15 @@ fun OrderCard(
         colors = CardDefaults.cardColors(BeigeCard)
     ) {
         Column(Modifier.padding(12.dp)) {
-            Row {
-                Text("Mã đơn: #${order.id} ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text("Khách hàng: ${order.customer}  Ngày: ${order.date}", fontSize = 12.sp)
-            }
+
+            Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text("Khách hàng: ${order.customer}  ·  ${order.date}", fontSize = 12.sp)
+
             Spacer(Modifier.height(6.dp))
-            Row {
-                Text("Trạng thái: ${order.status}", fontSize = 12.sp)
-                Spacer(Modifier.weight(1f))
-                Text("Tổng tiền: ${order.total}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
+
+            Text("Trạng thái: ${order.status}", fontSize = 12.sp)
+            Text("Tổng tiền: ${order.total}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
             Spacer(Modifier.height(8.dp))
 
             order.products.forEach {
@@ -372,31 +372,41 @@ fun OrderCard(
                 Spacer(Modifier.height(6.dp))
             }
 
+            Spacer(Modifier.height(8.dp))
             Text("Địa chỉ: ${order.address}", fontSize = 12.sp)
-            Spacer(Modifier.height(10.dp))
 
-            Box(
-                modifier = Modifier
-                    .background(PinkButton, RoundedCornerShape(16.dp))
-                    .clickable { expanded = true }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    nextStatus?.let {
+                        onUpdateStatus(order.id, it)
+                    }
+                },
+                enabled = nextStatus != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFF48FB1)
+                )
             ) {
                 Text(buttonText, fontSize = 12.sp, color = Color.White)
             }
-
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                listOf("Mới", "Đang xử lý", "Xác nhận").forEach { status ->
-                    DropdownMenuItem(
-                        text = { Text(status) },
-                        onClick = {
-                            onUpdateStatus(order.id, status)
-                            expanded = false
-                        }
-                    )
-                }
-            }
         }
     }
+}
+
+// dùng cho việc đổi 1 trạng thái sang trạng thái kế tiếp
+fun nextOrderStatus(current: String): String? = when (current) {
+    "Mới" -> "Đang xử lý"
+    "Đang xử lý" -> "Đang giao hàng"
+    "Đang giao hàng" -> "Đã giao"
+    else -> null
+}
+// Với mỗi trạng thái, nút bấm thể hiện hành động tiếp theo
+fun actionLabel(status: String): String = when (status) {
+    "Mới" -> "Xác nhận đơn"
+    "Đang xử lý" -> "Bắt đầu giao"
+    "Đang giao hàng" -> "Hoàn tất giao"
+    else -> "Hoàn tất"
 }
 
 @Composable

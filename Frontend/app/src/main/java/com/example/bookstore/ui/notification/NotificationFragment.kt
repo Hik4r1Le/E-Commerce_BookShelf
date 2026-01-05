@@ -15,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,10 +30,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import androidx.fragment.app.viewModels
 import com.example.bookstore.R
 import com.example.bookstore.model.NotificationItem
 
+// Fragment
 class NotificationFragment : Fragment() {
+
+    private val viewModel: NotificationViewModel by viewModels()
 
     companion object {
         fun open(from: Fragment) {
@@ -50,8 +56,12 @@ class NotificationFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 MaterialTheme {
+
+                    val notifications by
+                    viewModel.notifications.collectAsState()
+
                     NotificationScreen(
-                        notifications = sampleNotifications(),
+                        notifications = notifications,
                         onBack = {
                             requireActivity()
                                 .onBackPressedDispatcher
@@ -64,7 +74,7 @@ class NotificationFragment : Fragment() {
     }
 }
 
-// HEADER
+// Header
 @Composable
 fun NotificationHeader(onBack: () -> Unit) {
     Row(
@@ -96,7 +106,7 @@ fun NotificationHeader(onBack: () -> Unit) {
     }
 }
 
-// CARD
+// Card
 @Composable
 fun NotificationCard(item: NotificationItem) {
     Card(
@@ -140,7 +150,7 @@ fun NotificationCard(item: NotificationItem) {
     }
 }
 
-// SCREEN
+// Screen
 @Composable
 fun NotificationScreen(
     notifications: List<NotificationItem>,
@@ -156,7 +166,7 @@ fun NotificationScreen(
     }
 }
 
-// DATA
+// Data
 fun sampleNotifications() = listOf(
     NotificationItem(
         id = 1,
@@ -181,7 +191,7 @@ fun sampleNotifications() = listOf(
     )
 )
 
-// PREVIEW
+// Previews
 @Preview(showBackground = true)
 @Composable fun PreviewHeader() { NotificationHeader {} }
 

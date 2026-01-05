@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.compose.compiler)
 
     id("androidx.navigation.safeargs.kotlin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -116,7 +117,14 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation("com.google.android.gms:play-services-auth:21.0.0")
-    
+
     // Coroutine support
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // FIREBASE
+    implementation(
+        platform("com.google.firebase:firebase-bom:32.7.0")
+    )
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
 }

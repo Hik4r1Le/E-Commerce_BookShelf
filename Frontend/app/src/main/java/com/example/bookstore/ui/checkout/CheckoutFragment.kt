@@ -171,7 +171,8 @@ fun CheckoutScreen(
             Footer(
                 productItems = reviewData.productItems,
                 deliveryFee = selectedShipping?.shippingFee ?: 0.0,
-                couponDiscount = selectedCoupon?.discountValue ?: 0.0,
+                discountValue = selectedCoupon?.discountValue ?: 0.0,
+                discountType = selectedCoupon?.discountType ?: "PERCENTAGE",
                 isPlacingOrder = uiState.isPlacingOrder,
                 onOrder = { viewModel.placeOrder() }
             )
@@ -321,12 +322,19 @@ fun DeliverySection(methods: List<ShippingDetail>, selectedId: String?, onSelect
 fun Footer(
     productItems: List<CheckoutUIProductItem>,
     deliveryFee: Double,
-    couponDiscount: Double,
+    discountValue: Double,
+    discountType: String,
     isPlacingOrder: Boolean,
     onOrder: () -> Unit
 ) {
-    val totalProducts = productItems.sumOf { it.unitPrice * it.quantity }
-    val finalTotal = (totalProducts + deliveryFee - couponDiscount).coerceAtLeast(0.0)
+    val totalMerchandise = productItems.sumOf { it.unitPrice * it.quantity }
+    val actualDiscountAmount = if (discountType == "PERCENTAGE") {
+        totalMerchandise * discountValue
+    } else {
+        discountValue
+    }
+    val totalProductWithDeliveryFee = productItems.sumOf { it.unitPrice * it.quantity +  deliveryFee}
+    val finalTotal = (totalProductWithDeliveryFee - actualDiscountAmount).coerceAtLeast(0.0)
 
     Surface(
         shadowElevation = 16.dp,
@@ -335,16 +343,17 @@ fun Footer(
         Column(modifier = Modifier.background(Color.White).padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                 Text("Tiền hàng", color = Color.Gray)
-                Text(totalProducts.toCurrencyString())
+                Text(totalMerchandise.toCurrencyString())
             }
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                 Text("Phí giao hàng", color = Color.Gray)
                 Text("+ ${deliveryFee.toCurrencyString()}")
             }
-            if (couponDiscount > 0) {
+            if (actualDiscountAmount > 0) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-                    Text("Giảm giá", color = Color.Red)
-                    Text("- ${couponDiscount.toCurrencyString()}", color = Color.Red)
+                    val label = if (discountType == "PERCENTAGE") "Giảm giá (${(discountValue * 100).toInt()}%)" else "Giảm giá"
+                    Text(label, color = Color.Red)
+                    Text("- ${actualDiscountAmount.toCurrencyString()}", color = Color.Red)
                 }
             }
             Divider(Modifier.padding(vertical = 12.dp))

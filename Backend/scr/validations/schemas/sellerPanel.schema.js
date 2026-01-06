@@ -66,3 +66,28 @@ export const deleteSellerProductSchema = z.object({
         })
         .strict(),
 });
+
+const orderStatusEnum = z.enum([
+    "PENDING",
+    "CONFIRMED",
+    "PROCESSING",
+    "READY_FOR_PICKUP",
+    "SHIPPING",
+    "DELIVERED",
+    "CANCELLED",
+    "RETURN_REQUESTED",
+    "RETURNED",
+    "REFUNDED",
+]);
+
+
+export const updateSellerOrderSchema = z.object({
+    params: z
+        .object({
+            id: idSchema,
+        })
+        .strict(),
+    body: z.object({
+        status: orderStatusEnum,
+    }).strip()
+})

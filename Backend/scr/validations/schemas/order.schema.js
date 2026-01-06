@@ -116,6 +116,7 @@ const orderItemSchema = z
         stock_id: idStringSchema,
         quantity: quantitySchema,
         total_price: totalPriceSchema,
+        cart_id: idStringSchema
     })
     .strip();
 

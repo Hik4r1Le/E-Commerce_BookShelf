@@ -1,4 +1,4 @@
-import { findManySellerProductDetail, createSellerProductDetail, updateSellerProductDetail, deleteSellerProductDetail } from "../services/sellerPanel.service.js"
+import { findManySellerProductDetail, createSellerProductDetail, updateSellerProductDetail, deleteSellerProductDetail, findManySellerOrderDetail, updateSellerOrderDetail } from "../services/sellerPanel.service.js"
 import fs from "fs"
 
 export const getSellerProduct = async (req, res, next) => {
@@ -39,7 +39,7 @@ export const updateSellerProduct = async (req, res, next) => {
         if (req.file?.path) {
             fs.unlink(req.file.path, () => { });
         }
-        res.status(201).json({ success: true })
+        res.status(201).json({ success: true });
     } catch (error) {
         if (req.file?.path) {
             fs.unlink(req.file.path, () => { });
@@ -54,6 +54,28 @@ export const deleteSellerProduct = async (req, res, next) => {
         const productId = req.validated.params.id;
         await deleteSellerProductDetail(productId, sellerId);
         res.status(204).json({ success: true });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const getSellerOrder = async (req, res, next) => {
+    try {
+        const sellerId = req.user.id;
+        const sellerOrder = await findManySellerOrderDetail(sellerId);
+        res.status(200).json({ success: true, data: sellerOrder })
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const updateSellerOrder = async (req, res, next) => {
+    try {
+        const sellerId = req.user.id;
+        const newStatus = req.validated.body.status;
+        const orderId = req.validated.params.id;
+        await updateSellerOrderDetail(sellerId, orderId, newStatus);
+        res.status(201).json({ success: true })
     } catch (error) {
         next(error);
     }

@@ -91,9 +91,29 @@ class CheckoutViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPlacingOrder = true)
 
+            val selectedShipping = review.shippingMethods.find { it.id == state.selectedShippingId }
+            val selectedCoupon = review.coupons.find { it.id == state.selectedCouponId }
+
+            val shippingFee = selectedShipping?.shippingFee ?: 0.0
+            val discountValue = selectedCoupon?.discountValue ?: 0.0
+            val discountType = selectedCoupon?.discountType ?: "PERCENTAGE"
+
+            val totalMerchandisePrice = review.productItems.sumOf { it.unitPrice * it.quantity }
+
             // Tính toán giá từng item dựa trên Logic UI
             val orderRequests = review.productItems.map { item ->
                 val isNewAddress = state.selectedAddressId == null
+
+                val itemSubtotal = item.unitPrice * item.quantity
+                val ratio = if (totalMerchandisePrice > 0) itemSubtotal / totalMerchandisePrice else 0.0
+
+                val itemDiscount = if (discountType == "PERCENTAGE") {
+                    itemSubtotal * discountValue
+                } else {
+                    discountValue * ratio
+                }
+
+                val finalItemTotalPrice = itemSubtotal - itemDiscount + shippingFee;
 
                 OrderItemRequest(
                     addressId = state.selectedAddressId ?: "NEW_ADDRESS",
@@ -108,7 +128,8 @@ class CheckoutViewModel(
                     shippingMethodId = state.selectedShippingId ?: "",
                     stockId = item.stockId,
                     quantity = item.quantity,
-                    totalPrice = item.unitPrice * item.quantity
+                    totalPrice = finalItemTotalPrice.coerceAtLeast(0.0),
+                    cartId = item.cartItemId
                 )
             }
 

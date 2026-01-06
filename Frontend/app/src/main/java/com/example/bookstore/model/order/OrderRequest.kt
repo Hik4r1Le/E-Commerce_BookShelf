@@ -36,5 +36,8 @@ data class OrderItemRequest(
     val quantity: Int,
 
     @SerializedName("total_price")
-    val totalPrice: Double
+    val totalPrice: Double,
+
+    @SerializedName("cart_id")
+    val cartId: String,
 )

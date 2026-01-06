@@ -1,4 +1,5 @@
 import { findManyOrder, createManyOrder } from "../repositories/order.repository.js";
+import { deleteManyCart } from "../repositories/cart.repository.js"
 import { createAddress } from "../repositories/address.repository.js";
 
 export const createOrderDetail = async (userId, orderDataArray) => {
@@ -19,11 +20,22 @@ export const createOrderDetail = async (userId, orderDataArray) => {
         )
     }
 
-    return await createManyOrder(orderDataArray.map(item => ({
+    const order = await createManyOrder(orderDataArray.map(item => ({
         ...item,
         address_id: newAddress?.id ?? item.address_id,
         user_id: userId
     })));
+
+    const cartIdArray = orderDataArray.map(item => item.cart_id);
+
+    await deleteManyCart({
+        id: {
+            in: cartIdArray
+        },
+        user_id: userId,
+    });
+
+    return order;
 }
 
 

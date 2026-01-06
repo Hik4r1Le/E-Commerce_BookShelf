@@ -1,4 +1,4 @@
-import { findManySellerProduct, findManyCategory, createSellerProduct, updateSellerProduct, deleteSellerProduct } from "../repositories/sellerPanel.repository.js";
+import { findManySellerProduct, findManyCategory, findManySellerOrder, createSellerProduct, updateSellerProduct, updateSellerOrder, deleteSellerProduct } from "../repositories/sellerPanel.repository.js";
 import cloudinary from "../config/cloudinary.config.js"
 import { v4 as uuidv4 } from "uuid";
 
@@ -127,3 +127,58 @@ export const updateSellerProductDetail = async (sellerId, productId, image, prod
 export const deleteSellerProductDetail = async (productId, sellerId) => {
     await deleteSellerProduct(productId, sellerId);
 }
+
+export const findManySellerOrderDetail = async (sellerId) => {
+    return await findManySellerOrder(
+        {
+            stock: {
+                product: {
+                    seller_id: sellerId
+                }
+            }
+        },
+        {
+            id: true,
+            quantity: true,
+            total_price: true,
+            status: true,
+            updated_at: true,
+            address: {
+                select: {
+                    recipient_name: true,
+                    street: true,
+                    district: true,
+                    city: true,
+                }
+            },
+            stock: {
+                select: {
+                    product: {
+                        select: {
+                            name: true,
+                            price: true,
+                            image_url: true,
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+export const updateSellerOrderDetail = async (sellerId, orderId, newStatus) => {
+    await updateSellerOrder(
+        {
+            stock: {
+                product: {
+                    seller_id: sellerId
+                }
+            },
+            id: orderId
+        },
+        {
+            status: newStatus
+        }
+    )
+}
+

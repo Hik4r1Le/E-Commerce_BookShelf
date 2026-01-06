@@ -6,6 +6,7 @@ import orderRotuer from "./order.route.js"
 import bannerRouter from "./banner.route.js"
 import reviewRouter from "./review.route.js"
 import userProfileRouter from "./userProfile.route.js"
+import sellerPanelRouter from "./sellerPanel.route.js"
 
 const v1Routes = (app) => {
     // Authentication API
@@ -31,6 +32,9 @@ const v1Routes = (app) => {
 
     // User Profile API
     app.use("/api/v1/user-profile", userProfileRouter);
+
+    // Seller Panel API
+    app.use("/api/v1/seller-panel", sellerPanelRouter);
 };
 
 export default v1Routes;

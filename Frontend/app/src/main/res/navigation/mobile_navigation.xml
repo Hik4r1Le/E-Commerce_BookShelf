@@ -47,7 +47,6 @@
             app:popUpToInclusive="true" />
     </fragment>
 
-
     <!--  Navigation Order UI  -->
     <fragment
         android:id="@+id/navigation_order"
@@ -67,6 +66,18 @@
             app:destination="@id/navigation_login"
             app:popUpTo="@id/mobile_navigation"
             app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_profile_to_seller_panel"
+            app:destination="@id/navigation_seller_panel" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_seller_panel"
+        android:name="com.example.bookstore.ui.sellerpanel.SellerPanelFragment"
+        android:label="@string/title_seller_panel"
+        tools:layout="@layout/fragment_seller_panel" >
 
     </fragment>
 

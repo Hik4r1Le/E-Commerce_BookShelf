@@ -96,7 +96,10 @@ class UserProfileFragment : Fragment(R.layout.fragment_user_profile) {
                             onNotificationClick = {
                                 NotificationFragment.open(this@UserProfileFragment)
                             },
-                            onLogoutClick = { viewModel.logout() }
+                            onLogoutClick = { viewModel.logout() },
+                            onSellerPanelClick = {
+                                findNavController().navigate(R.id.action_profile_to_seller_panel)
+                            }
                         )
 
                         if (uiState.isLoading) {
@@ -134,6 +137,7 @@ fun UserProfileScreen(
     onCityChange: (String) -> Unit,
     onNotificationClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onSellerPanelClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -141,7 +145,7 @@ fun UserProfileScreen(
             .background(Color(0xFFFFF8F3))
             .verticalScroll(rememberScrollState()) // Cho phép cuộn để không bị che nút Lưu
     ) {
-        UserProfileHeader(uiState, onEdit = {}, onPickAvatar, onNotificationClick, onLogoutClick)
+        UserProfileHeader(uiState, onEdit = {}, onPickAvatar, onNotificationClick, onLogoutClick, onSellerPanelClick)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -226,6 +230,7 @@ fun UserProfileHeader(
     onPickAvatar: () -> Unit,
     onNotificationClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onSellerPanelClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -309,7 +314,7 @@ fun UserProfileHeader(
                 "Seller Panel",
                 color = Color.Red,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.clickable { /* Handle click */ }
+                modifier = Modifier.clickable { onSellerPanelClick() }
             )
 
             // Icon thông báo với vùng chạm rộng hơn cho dễ bấm

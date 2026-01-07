@@ -1,8 +1,10 @@
 package com.example.bookstore.ui.book_detail
 
+import androidx.compose.ui.platform.LocalContext
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,16 +14,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.StarHalf
@@ -50,10 +56,12 @@ import androidx.compose.material3.Card
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.style.TextAlign
-
-import androidx.fragment.app.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import coil.compose.AsyncImage
 import com.example.bookstore.model.products.ProductDetailUI
 import java.text.NumberFormat
@@ -61,6 +69,7 @@ import java.util.Locale
 import androidx.navigation.fragment.navArgs
 import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.ViewModelProvider
+import kotlin.getValue
 
 
 class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
@@ -72,7 +81,7 @@ class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
         super.onViewCreated(view, savedInstanceState)
         productId = args.productId
 
-        viewModel = ViewModelProvider(this, BookDetailViewModelFactory(requireContext()))
+        viewModel = ViewModelProvider(this,  BookDetailViewModelFactory(requireContext()))
             .get(BookDetailViewModel::class.java)
 
         // Tự động gọi API khi Fragment được tạo
@@ -177,6 +186,18 @@ fun BookDetailScreen(
                 item {
                     BookDescriptionCard(description = book.description)
                 }
+                item {
+                    UserRatingInputCard(
+                        onSubmitReview = { rating, comment ->
+                            val productId = ""
+                            viewModel.submitReview(book.id, rating, comment)
+                        },
+                        isSubmitting = viewModel.isSubmittingReview,
+                        submitSuccess = viewModel.reviewSubmitSuccess,
+                        onResetSuccess = { viewModel.resetReviewSuccess() }
+                    )
+                }
+
 
                 // Reader Comments
                 item {
@@ -558,6 +579,188 @@ fun UserCommentCard(
     }
 }
 
+@Composable
+fun UserRatingInputCard(
+    onSubmitReview: (rating: Int, comment: String) -> Unit,
+    isSubmitting: Boolean = false,
+    submitSuccess: Boolean = false,
+    onResetSuccess: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var selectedRating by remember { mutableStateOf(0) }
+    var commentText by remember { mutableStateOf("") }
+    var isExpanded by remember { mutableStateOf(false) }
+
+    // Auto-collapse after successful submission
+    LaunchedEffect(submitSuccess) {
+        if (submitSuccess) {
+            selectedRating = 0
+            commentText = ""
+            isExpanded = false
+            onResetSuccess()
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D3C4)),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Đánh giá của bạn",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                IconButton(
+                    onClick = { isExpanded = !isExpanded },
+                    enabled = !isSubmitting
+                ) {
+                    Icon(
+                        imageVector = if (isExpanded)
+                            Icons.Filled.KeyboardArrowUp
+                        else
+                            Icons.Filled.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) "Thu gọn" else "Mở rộng"
+                    )
+                }
+            }
+
+            AnimatedVisibility(visible = isExpanded) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Star Rating Selector
+                    Text(
+                        text = "Chọn số sao:",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        repeat(5) { index ->
+                            IconButton(
+                                onClick = { selectedRating = index + 1 },
+                                enabled = !isSubmitting
+                            ) {
+                                Icon(
+                                    imageVector = if (index < selectedRating)
+                                        Icons.Filled.Star
+                                    else
+                                        Icons.Filled.StarBorder,
+                                    contentDescription = "Sao ${index + 1}",
+                                    tint = Color(0xFFFF9800),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (selectedRating > 0) {
+                        Text(
+                            text = when (selectedRating) {
+                                1 -> "Rất tệ"
+                                2 -> "Tệ"
+                                3 -> "Trung bình"
+                                4 -> "Tốt"
+                                5 -> "Xuất sắc"
+                                else -> ""
+                            },
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Comment Input
+                    Text(
+                        text = "Nhận xét của bạn:",
+                        fontSize = 14.sp,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = commentText,
+                        onValueChange = { commentText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp),
+                        placeholder = {
+                            Text("Chia sẻ trải nghiệm của bạn về cuốn sách này...")
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            disabledContainerColor = Color.White.copy(alpha = 0.6f)
+                        ),
+                        enabled = !isSubmitting,
+                        maxLines = 5
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Submit Button
+                    Button(
+                        onClick = {
+                            if (selectedRating > 0 && commentText.isNotBlank()) {
+                                onSubmitReview(selectedRating, commentText)
+                            }
+                        },
+                        enabled = selectedRating > 0 && commentText.isNotBlank() && !isSubmitting,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF5ADBC),
+                            disabledContainerColor = Color.LightGray
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Đang gửi...")
+                        } else {
+                            Text(
+                                text = "Gửi đánh giá",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.Black
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 @Preview
 @Composable
 fun PreViewHeader(){
@@ -624,3 +827,38 @@ fun PreviewComment() {
     )
 }
 
+@Preview(
+    showBackground = true,
+    name = "Rating Input - Collapsed"
+)
+@Composable
+fun PreviewUserRatingInputCollapsed() {
+    BookstoreTheme {
+        UserRatingInputCard(
+            onSubmitReview = { _, _ -> },
+            isSubmitting = false,
+            submitSuccess = false
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "Rating Input - Expanded"
+)
+@Composable
+fun PreviewUserRatingInputExpanded() {
+    BookstoreTheme {
+        // Force expanded state by wrapping & copying logic
+        var fakeSubmitSuccess by remember { mutableStateOf(false) }
+
+        UserRatingInputCard(
+            onSubmitReview = { _, _ ->
+                fakeSubmitSuccess = true
+            },
+            isSubmitting = false,
+            submitSuccess = fakeSubmitSuccess,
+            onResetSuccess = { fakeSubmitSuccess = false }
+        )
+    }
+}

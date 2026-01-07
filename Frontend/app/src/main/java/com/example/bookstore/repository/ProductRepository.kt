@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Response
 import org.json.JSONObject
+import com.example.bookstore.model.products.SubmitReviewRequest
 
 class ProductRepository(
     private val apiService: ApiService
@@ -33,6 +34,26 @@ class ProductRepository(
                 if (response.isSuccessful) {
                     response.body()?.let { Result.success(it) }
                         ?: Result.failure(Exception("Response body is empty"))
+                } else {
+                    Result.failure(Exception(getErrorMessage(response)))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Connection error: ${e.message}", e))
+            }
+        }
+    }
+    suspend fun submitReview(productId: String, rating: Int, comment: String): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = SubmitReviewRequest(
+                    rating = rating,
+                    comment = comment
+                )
+
+                val response = apiService.submitReview(productId, request)
+
+                if (response.isSuccessful) {
+                    Result.success(Unit)
                 } else {
                     Result.failure(Exception(getErrorMessage(response)))
                 }

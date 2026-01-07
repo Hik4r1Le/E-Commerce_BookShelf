@@ -22,14 +22,19 @@ class BookDetailViewModel(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    // Lưu trữ dữ liệu chi tiết sản phẩm
     var productDetail by mutableStateOf<ProductDetailUI?>(null)
         private set
 
     var isAddingToCart by mutableStateOf(false)
         private set
 
-    // Hàm gọi API lấy chi tiết sản phẩm
+    // ★ NEW: Review submission states
+    var isSubmittingReview by mutableStateOf(false)
+        private set
+
+    var reviewSubmitSuccess by mutableStateOf(false)
+        private set
+
     fun loadProductDetail(productId: String) {
         if (productDetail != null) return
 
@@ -67,10 +72,8 @@ class BookDetailViewModel(
             val result = cartRepository.addToCart(request)
 
             result.onSuccess {
-                // Xử lý thành công
                 onSuccess()
             }.onFailure { e ->
-                // Xử lý thất bại
                 errorMessage = e.message
             }
 
@@ -79,7 +82,37 @@ class BookDetailViewModel(
         }
     }
 
+    // ★ NEW: Submit review function
+    fun submitReview(productId: String, rating: Int, comment: String, onSuccess: () -> Unit = {}) {
+        if (isSubmittingReview) return
+
+        viewModelScope.launch {
+            isSubmittingReview = true
+            errorMessage = null
+            reviewSubmitSuccess = false
+
+            val result = productRepository.submitReview(productId, rating, comment)
+
+            result.onSuccess {
+                reviewSubmitSuccess = true
+                // Reload product detail to show new review
+                productDetail = null
+                loadProductDetail(productId)
+                onSuccess()
+            }.onFailure { e ->
+                errorMessage = e.message
+                reviewSubmitSuccess = false
+            }
+
+            isSubmittingReview = false
+        }
+    }
+
     fun clearError() {
         errorMessage = null
+    }
+
+    fun resetReviewSuccess() {
+        reviewSubmitSuccess = false
     }
 }

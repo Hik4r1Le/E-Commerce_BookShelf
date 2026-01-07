@@ -136,10 +136,10 @@ fun OrderItem(order: OrderUIModel) {
             Text(order.productName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Text(order.authorName, fontSize = 12.sp, color = Color.Gray)
             Text("Số lượng: ${order.quantity}", fontSize = 12.sp)
-            Text("Trạng thái: ${order.status}", fontSize = 12.sp, color = TealGreen)
+            // Text("Trạng thái: ${order.status}", fontSize = 12.sp, color = TealGreen)
         }
         Text(
-            (order.unitPrice * (1 - order.discount / 100.0)).toCurrencyString(), // Giá sau giảm
+            (order.totalPrice).toCurrencyString(),
             modifier = Modifier.background(Color.White, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 12.sp,
             color = Color.Black
@@ -171,10 +171,10 @@ fun SectionOrderCard(section: OrderDataSection) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically){
                     val note = when(section.status){
                         OrderStatus.PENDING -> "Đơn hàng đang chờ xác nhận."
-                        OrderStatus.WAIT_PICKUP -> "Đơn hàng đang được chuẩn bị."
-                        OrderStatus.WAIT_DELIVERY -> "Đơn hàng đã được vận chuyển."
+                        OrderStatus.PROCESSING -> "Đơn hàng đang được chuẩn bị."
+                        OrderStatus.SHIPPING -> "Đơn hàng đã được vận chuyển."
                         OrderStatus.DELIVERED -> "Đã giao hàng thành công."
-                        OrderStatus.CANCELED -> "Đơn hàng đã bị hủy."
+                        OrderStatus.CANCELLED -> "Đơn hàng đã bị hủy."
                     }
                     if(note.isNotEmpty()){
                         Text(note, fontSize = 12.sp, color = TealGreen, modifier = Modifier.weight(1f))
@@ -247,7 +247,7 @@ fun OrdersContent(
                 .navigationBarsPadding(),
             contentPadding = PaddingValues(
                 top = 16.dp,
-                bottom = 32.dp
+                bottom = 120.dp
             ),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -274,53 +274,3 @@ fun OrdersContent(
         }
     }
 }
-
-// Previews
-//val sampleOrders = listOf(
-//    OrderData(1,"Muôn kiếp nhân sinh","Nguyễn Phong",99,1,R.drawable.book6,OrderStatus.PENDING,"Đang xử lý"),
-//    OrderData(2,"Cho tôi một vé đi tuổi thơ","Nguyễn Nhật Ánh",69,2,R.drawable.book7,OrderStatus.PENDING,"Đang xử lý")
-//)
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewSectionWaitingConfirmation() {
-//    SectionOrderCardFloat(OrderDataSection(OrderStatus.PENDING, sampleOrders, 257, "Đang xử lý"), showNote = false)
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewSectionWaitingPickup() {
-//    SectionOrderCardFloat(OrderDataSection(OrderStatus.WAIT_PICKUP, sampleOrders, 257, "Liên hệ Shop"), showNote = true)
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewSectionWaitingDelivery() {
-//    SectionOrderCardFloat(OrderDataSection(OrderStatus.WAIT_DELIVERY, sampleOrders, 257, "Đã nhận hàng"), showNote = true)
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewSectionDelivered() {
-//    SectionOrderCardFloat(OrderDataSection(OrderStatus.DELIVERED, sampleOrders, 257, "Mua lại"), showNote = true)
-//}
-//
-//@Preview(showBackground = true, heightDp = 520)
-//@Composable
-//fun PreviewOrdersScreen() {
-//    var selectedTabIndex by remember { mutableStateOf(0) }
-//    OrdersContent(
-//        tabs = listOf("Chờ xác nhận","Chờ lấy hàng","Chờ giao hàng","Đã giao"),
-//        selectedTabIndex = selectedTabIndex,
-//        totalMessages = 8,
-//        orderSections = listOf(
-//            OrderDataSection(OrderStatus.PENDING, sampleOrders, 257, "Đang xử lý"),
-//            OrderDataSection(OrderStatus.WAIT_PICKUP, sampleOrders, 257, "Liên hệ Shop"),
-//            OrderDataSection(OrderStatus.WAIT_DELIVERY, sampleOrders, 257, "Đã nhận hàng"),
-//            OrderDataSection(OrderStatus.DELIVERED, sampleOrders, 257, "Mua lại")
-//        ),
-//        onTabSelected = { selectedTabIndex = it },
-//        onBackClick = {},
-//        onMessageClick = {}
-//    )
-//}

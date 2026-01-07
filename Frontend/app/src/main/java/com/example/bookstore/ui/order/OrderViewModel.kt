@@ -12,10 +12,10 @@ import com.example.bookstore.repository.OrderRepository
 
 enum class OrderStatus(val label: String) {
     PENDING("Chờ xác nhận"),
-    WAIT_PICKUP("Chờ lấy hàng"),
-    WAIT_DELIVERY("Chờ giao hàng"),
+    PROCESSING("Chờ lấy hàng"),
+    SHIPPING("Chờ giao hàng"),
     DELIVERED("Đã giao"),
-    CANCELED("Đã hủy") // Thêm trạng thái hủy nếu cần
+    CANCELLED("Đã hủy") // Thêm trạng thái hủy nếu cần
 }
 
 data class OrderDataSection(
@@ -81,8 +81,8 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
 
         val allStatusTabs = listOf(
             OrderStatus.PENDING,
-            OrderStatus.WAIT_PICKUP,
-            OrderStatus.WAIT_DELIVERY,
+            OrderStatus.PROCESSING,
+            OrderStatus.SHIPPING,
             OrderStatus.DELIVERED
             // Thêm OrderStatus.CANCELED nếu cần hiển thị tab Hủy
         )
@@ -102,10 +102,10 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
     private fun getActionTextForStatus(status: OrderStatus): String {
         return when (status) {
             OrderStatus.PENDING -> "Hủy đơn" // Hoặc "Đang xử lý" nếu không cho hủy
-            OrderStatus.WAIT_PICKUP -> "Liên hệ Shop"
-            OrderStatus.WAIT_DELIVERY -> "Đã nhận hàng"
+            OrderStatus.PROCESSING -> "Liên hệ Shop"
+            OrderStatus.SHIPPING -> "Đã nhận hàng"
             OrderStatus.DELIVERED -> "Mua lại"
-            OrderStatus.CANCELED -> ""
+            OrderStatus.CANCELLED -> ""
         }
     }
 
@@ -122,8 +122,8 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
     // Thuộc tính hỗ trợ UI
     val tabs = listOf(
         OrderStatus.PENDING.label,
-        OrderStatus.WAIT_PICKUP.label,
-        OrderStatus.WAIT_DELIVERY.label,
+        OrderStatus.PROCESSING.label,
+        OrderStatus.SHIPPING.label,
         OrderStatus.DELIVERED.label
     )
 }

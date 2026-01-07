@@ -8,7 +8,7 @@ data class OrderUIModel(
     val categoryName: String,
     val status: String,
     val quantity: Int,
-    val totalPrice: Double, // Tổng giá của sản phẩm này (quantity * giá sau giảm)
+    val totalPrice: Double, // Tổng giá của sản phẩm đã tính phí giao hàng và giảm giá
     val unitPrice: Double, // Giá gốc
     val discount: Double
 )

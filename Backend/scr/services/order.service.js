@@ -20,11 +20,13 @@ export const createOrderDetail = async (userId, orderDataArray) => {
         )
     }
 
-    const order = await createManyOrder(orderDataArray.map(item => ({
-        ...item,
-        address_id: newAddress?.id ?? item.address_id,
-        user_id: userId
-    })));
+    const order = await createManyOrder(
+        orderDataArray.map(({ cart_id, ...rest }) => ({
+            ...rest,
+            address_id: newAddress?.id ?? rest.address_id,
+            user_id: userId,
+        }))
+    );
 
     const cartIdArray = orderDataArray.map(item => item.cart_id);
 

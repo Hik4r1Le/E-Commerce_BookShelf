@@ -1,4 +1,4 @@
-import { findManySellerProduct, findManyCategory, findManySellerOrder, createSellerProduct, updateSellerProduct, updateSellerOrder, deleteSellerProduct } from "../repositories/sellerPanel.repository.js";
+import { findManySellerProduct, findManyCategory, findManySellerOrder, createSellerProduct, updateSellerProduct, updateSellerOrder, deleteSellerProduct, updateManySellerProduct } from "../repositories/sellerPanel.repository.js";
 import cloudinary from "../config/cloudinary.config.js"
 import { v4 as uuidv4 } from "uuid";
 
@@ -99,7 +99,7 @@ export const updateSellerProductDetail = async (sellerId, productId, image, prod
             ...(productData.author_name && { author_name: productData.author_name }),
             ...(productData.description && { description: productData.description }),
             ...(productData.price && { price: productData.price }),
-            ...(productImageUrl != "" && { image_url: productImageUrl }),
+            ...(productImageUrl !== "" && { image_url: productImageUrl }),
             stock: {
                 update: {
                     ...(productData.quantity !== undefined && {
@@ -122,6 +122,12 @@ export const updateSellerProductDetail = async (sellerId, productId, image, prod
             })
         }
     )
+}
+
+export const updateManySellerProductDetail = async (sellerId) => {
+    await updateManySellerProduct(null, {
+        seller_id: sellerId
+    });
 }
 
 export const deleteSellerProductDetail = async (productId, sellerId) => {

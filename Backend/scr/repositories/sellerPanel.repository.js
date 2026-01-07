@@ -19,6 +19,9 @@ export const createSellerProduct = async (data, option) =>
 export const updateSellerProduct = async (filter, data) =>
     await prisma.product.update(queryBuilder(filter, null, data));
 
+export const updateManySellerProduct = async (filter, data) => 
+    await prisma.product.updateMany(queryBuilder(filter, null, data))
+
 export const deleteSellerProduct = async (productId, sellerId) => {
     return await prisma.$transaction(async (tx) => {
 

@@ -1,4 +1,4 @@
-import { findManySellerProductDetail, createSellerProductDetail, updateSellerProductDetail, deleteSellerProductDetail, findManySellerOrderDetail, updateSellerOrderDetail } from "../services/sellerPanel.service.js"
+import { findManySellerProductDetail, createSellerProductDetail, updateSellerProductDetail, deleteSellerProductDetail, findManySellerOrderDetail, updateSellerOrderDetail, updateManySellerProductDetail } from "../services/sellerPanel.service.js"
 import fs from "fs"
 
 export const getSellerProduct = async (req, res, next) => {
@@ -44,6 +44,16 @@ export const updateSellerProduct = async (req, res, next) => {
         if (req.file?.path) {
             fs.unlink(req.file.path, () => { });
         }
+        next(error);
+    }
+}
+
+export const updateManySellerProduct = async (req, res, next) => {
+    try {
+        const sellerId = req.user.id;
+        await updateManySellerProductDetail(sellerId);
+        res.status(201).json({ success: true });
+    } catch (error) {
         next(error);
     }
 }

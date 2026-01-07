@@ -146,3 +146,62 @@ export const createOrderSchema =
         })
     });
 
+const parseOrderIdPreprocess = (value) => {
+    if (value === undefined || value === null) return undefined;
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string") {
+        const s = value.trim();
+        if (s === "") return undefined;
+        try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // ignore
+        }
+
+        // Fallback: comma-separated
+        if (s.includes(",")) {
+            return s.split(",").map((it) => it.trim()).filter(Boolean);
+        }
+
+        // Single id string -> treat as single-element array
+        return [s];
+    }
+
+    // Không hợp lệ
+    return undefined;
+};
+
+export const deleteManyOrderSchema =
+    z.object({
+        body: z
+            .object({
+                order_id: z
+                    .preprocess(
+                        parseOrderIdPreprocess,
+                        z.array(idStringSchema)
+                            .min(1, "Phải có ít nhất 1 order_id")
+                            .max(100, "Số lượng order_id tối đa là 100")
+                    ),
+            })
+            .superRefine((data, ctx) => {
+                // Kiểm tra trùng lặp
+                const { order_id } = data;
+                if (Array.isArray(order_id)) {
+                    const seen = new Set();
+                    for (let i = 0; i < order_id.length; i++) {
+                        const id = order_id[i];
+                        if (seen.has(id)) {
+                            ctx.addIssue({
+                                code: z.ZodIssueCode.custom,
+                                path: ["order_id", i],
+                                message: `order_id "${id}" bị trùng lặp`,
+                            });
+                        } else {
+                            seen.add(id);
+                        }
+                    }
+                }
+            })
+            .strip(),
+    });

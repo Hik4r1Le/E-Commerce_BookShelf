@@ -9,7 +9,8 @@ export const createManyOrder = async (data, option) => {
     return await prisma.order.createMany(queryBuilder(null, option, data));
 }
 
-
+export const deleteManyOrder = async (filter) => 
+    await prisma.order.deleteMany(queryBuilder(filter))
 
 
 

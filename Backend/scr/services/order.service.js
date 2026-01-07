@@ -1,4 +1,4 @@
-import { findManyOrder, createManyOrder } from "../repositories/order.repository.js";
+import { findManyOrder, createManyOrder, deleteManyOrder } from "../repositories/order.repository.js";
 import { deleteManyCart } from "../repositories/cart.repository.js"
 import { createAddress } from "../repositories/address.repository.js";
 
@@ -40,6 +40,14 @@ export const createOrderDetail = async (userId, orderDataArray) => {
     return order;
 }
 
+export const deleteManyOrderDetail = async (userId, orderIdArray) => {
+    return await deleteManyOrder({
+        user_id: userId,
+        id: {
+            in: orderIdArray
+        }
+    })
+}
 
 export const findOrderDetail = async (userId) =>
     await findManyOrder(
@@ -47,6 +55,7 @@ export const findOrderDetail = async (userId) =>
             user_id: userId
         },
         {
+            id: true,
             status: true,
             quantity: true,
             total_price: true,

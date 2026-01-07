@@ -72,6 +72,25 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
         }
     }
 
+    // Hàm xử lý khi người mua bấm nút hành động (Hủy hoặc Đã nhận)
+    fun performOrderAction(orderId: String, currentStatus: OrderStatus) {
+        val nextStatus = when (currentStatus) {
+            OrderStatus.PENDING -> "CANCELLED" // Người mua hủy đơn khi còn chờ xác nhận
+            OrderStatus.SHIPPING -> "DELIVERED" // Người mua xác nhận đã nhận hàng
+            else -> return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            // Giả sử repository của bạn có hàm updateStatus tương tự seller
+            repository.updateOrderStatus(orderId, nextStatus).onSuccess {
+                loadOrders() // Tải lại danh sách sau khi cập nhật thành công
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = e.message)
+            }
+        }
+    }
+
     private fun groupOrdersByStatus(orders: List<OrderUIModel>): List<OrderDataSection> {
         val groups = orders.groupBy { order ->
             // Chuyển đổi trạng thái chuỗi từ API sang Enum
@@ -83,8 +102,8 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
             OrderStatus.PENDING,
             OrderStatus.PROCESSING,
             OrderStatus.SHIPPING,
-            OrderStatus.DELIVERED
-            // Thêm OrderStatus.CANCELED nếu cần hiển thị tab Hủy
+            OrderStatus.DELIVERED,
+            OrderStatus.CANCELLED
         )
 
         return allStatusTabs.map { status ->
@@ -101,11 +120,11 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
 
     private fun getActionTextForStatus(status: OrderStatus): String {
         return when (status) {
-            OrderStatus.PENDING -> "Hủy đơn" // Hoặc "Đang xử lý" nếu không cho hủy
-            OrderStatus.PROCESSING -> "Liên hệ Shop"
+            OrderStatus.PENDING -> "Hủy đơn"
             OrderStatus.SHIPPING -> "Đã nhận hàng"
             OrderStatus.DELIVERED -> "Mua lại"
-            OrderStatus.CANCELLED -> ""
+            OrderStatus.PROCESSING -> "Liên hệ Shop"
+            else -> ""
         }
     }
 

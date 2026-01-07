@@ -1,9 +1,9 @@
 package com.example.bookstore.ui.notification
 
 import androidx.lifecycle.ViewModel
-import com.example.bookstore.model.NotificationDto
-import com.example.bookstore.model.NotificationItem
-import com.example.bookstore.model.toUi
+import com.example.bookstore.model.notification.NotificationDto
+import com.example.bookstore.model.notification.NotificationItem
+import com.example.bookstore.model.notification.toUi
 import com.google.firebase.database.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

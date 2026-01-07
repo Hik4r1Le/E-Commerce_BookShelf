@@ -1,4 +1,4 @@
-package com.example.bookstore.model
+package com.example.bookstore.model.notification
 
 import com.example.bookstore.R
 

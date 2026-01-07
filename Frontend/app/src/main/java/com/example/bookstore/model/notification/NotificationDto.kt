@@ -1,4 +1,4 @@
-package com.example.bookstore.model
+package com.example.bookstore.model.notification
 
 data class NotificationDto(
     val id: Int = 0,

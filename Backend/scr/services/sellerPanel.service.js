@@ -11,12 +11,23 @@ export const findManySellerProductDetail = async (sellerId) => {
             id: true,
             name: true,
             author_name: true,
+            description: true,
             price: true,
             image_url: true,
             stock: {
                 select: {
                     quantity: true,
                     status: true,
+                }
+            },
+            productCategory: {
+                select: {
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                        }
+                    }
                 }
             }
         }

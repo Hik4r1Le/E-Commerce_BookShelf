@@ -11,6 +11,9 @@ data class OrderResponse(
 )
 
 data class OrderDetailItem(
+    @SerializedName("id")
+    val id: String,
+
     @SerializedName("status")
     val status: String,
 

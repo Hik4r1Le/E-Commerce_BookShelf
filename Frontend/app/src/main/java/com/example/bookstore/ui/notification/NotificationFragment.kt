@@ -32,7 +32,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import com.example.bookstore.R
-import com.example.bookstore.model.NotificationItem
+import com.example.bookstore.model.notification.NotificationItem
 
 // Fragment
 class NotificationFragment : Fragment() {

@@ -58,4 +58,20 @@ class OrderRepository(
             }
         }
     }
+
+    // API update trạng thái đơn hàng từ người dùng
+    suspend fun updateOrderStatus(orderId: String, newStatus: String): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.getOrders()
+                if (response.isSuccessful) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(Exception(getErrorMessage(response)))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Connection error: ${e.message}", e))
+            }
+        }
+    }
 }

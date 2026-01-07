@@ -2,38 +2,39 @@ package com.example.bookstore.ui.sellerpanel
 
 import android.net.Uri
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
+import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import coil.compose.AsyncImage
 import com.example.bookstore.R
-import com.example.bookstore.model.SellerProduct
-import com.example.bookstore.model.Order
-import com.example.bookstore.model.OrderProduct
+import com.example.bookstore.model.sellerpanel.*
 
 // Color
 
@@ -44,132 +45,115 @@ private val TabGreen = Color(0xFF12793D)
 private val PinkButton = Color(0xFFF2AEBB)
 
 // Fragment
-
-class SellerPanelFragment : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setContent {
-                SellerPanelScreen()
-            }
-        }
+class SellerPanelFragment : Fragment(R.layout.fragment_seller_panel) {
+    private val viewModel: SellerPanelViewModel by viewModels {
+        SellerPanelViewModelFactory(requireContext())
     }
-}
 
-// Main
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.loadData()
 
-@Composable
-fun SellerPanelScreen(
-    viewModel: SellerPanelViewModel = viewModel()
-) {
-    var showAddDialog by remember { mutableStateOf(false) }
+        view.findViewById<ComposeView>(R.id.composeView).setContent {
+            val uiState by viewModel.uiState.collectAsState()
+            val context = LocalContext.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-    ) {
-        SellerTopBar()
-        SellerTabBar(viewModel.selectedTab) {
-            viewModel.selectedTab = it
-        }
+            // Trạng thái điều khiển Dialog
+            var showDialog by remember { mutableStateOf(false) }
+            var editingProduct by remember { mutableStateOf<SellerProductUIModel?>(null) }
 
-        if (viewModel.selectedTab == 0) {
-            ProductSection(viewModel.products) {
-                showAddDialog = true
-            }
-        } else {
-            OrderSection(
-                orders = viewModel.orders,
-                onUpdateStatus = { id, status ->
-                    viewModel.updateOrderStatus(id, status)
+            MaterialTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF5F5F5)) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Column {
+                            SellerTopBar(onBack = { findNavController().navigateUp() })
+                            SellerTabBar(uiState.selectedTab, viewModel::onTabSelected)
+
+                            if (uiState.selectedTab == 0) {
+                                ProductSection(
+                                    products = uiState.products,
+                                    onAddClick = {
+                                        editingProduct = null // Reset để hiểu là thêm mới
+                                        showDialog = true
+                                    },
+                                    onEdit = { product ->
+                                        editingProduct = product // Gán sản phẩm để hiểu là đang sửa
+                                        showDialog = true
+                                    },
+                                    onDelete = viewModel::deleteProduct
+                                )
+                            } else {
+                                OrderSection(uiState.orders, viewModel::updateOrderStatus)
+                            }
+                        }
+
+                        if (showDialog) {
+                            UpsertProductDialog(
+                                categories = uiState.categories,
+                                initialProduct = editingProduct, // Truyền dữ liệu cũ nếu là Edit
+                                onDismiss = { showDialog = false },
+                                onConfirm = { name, author, desc, price, qty, catId, uri ->
+                                    if (editingProduct == null) {
+                                        viewModel.addProduct(context, name, author, desc, price, qty, catId, uri)
+                                    } else {
+                                        viewModel.updateProduct(context, editingProduct!!.id, name, author, desc, price, qty, catId, uri)
+                                    }
+                                    showDialog = false
+                                }
+                            )
+                        }
+
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = PurpleTop)
+                        }
+                    }
                 }
-            )
-        }
-    }
-
-    if (showAddDialog) {
-        AddProductDialog(
-            onDismiss = { showAddDialog = false },
-            onAdd = {
-                viewModel.addProduct(it)
-                showAddDialog = false
             }
-        )
+        }
     }
 }
 
-// Top Bar
-
 @Composable
-fun SellerTopBar() {
+fun SellerTopBar(onBack: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PurpleTop)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().background(PurpleTop).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White) }
+        Text("SELLER PANEL", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Spacer(Modifier.weight(1f))
-        BadgedBox(badge = { Badge { Text("20") } }) {
-            Icon(Icons.Default.ChatBubbleOutline, null, tint = Color.White)
-        }
+        Icon(Icons.Default.ChatBubbleOutline, null, tint = Color.White)
     }
 }
-
-// Tab Bar
 
 @Composable
 fun SellerTabBar(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        TabItem("Sản phẩm của tôi", selected == 0) { onSelect(0) }
-        TabItem("Đơn hàng", selected == 1) { onSelect(1) }
+    TabRow(selectedTabIndex = selected, containerColor = Color.White, contentColor = TabGreen) {
+        Tab(selected = selected == 0, onClick = { onSelect(0) }) {
+            Text("Sản phẩm của tôi", modifier = Modifier.padding(16.dp), fontWeight = if(selected==0) FontWeight.Bold else FontWeight.Normal)
+        }
+        Tab(selected = selected == 1, onClick = { onSelect(1) }) {
+            Text("Đơn hàng", modifier = Modifier.padding(16.dp), fontWeight = if(selected==1) FontWeight.Bold else FontWeight.Normal)
+        }
     }
 }
-
-@Composable
-fun TabItem(title: String, selected: Boolean, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .clickable { onClick() }
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            title,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = TabGreen
-        )
-    }
-}
-
-// Product
 
 @Composable
 fun ProductSection(
-    products: List<SellerProduct>,
-    onAddClick: () -> Unit
+    products: List<SellerProductUIModel>,
+    onAddClick: () -> Unit, // Đã sử dụng lại
+    onEdit: (SellerProductUIModel) -> Unit,
+    onDelete: (String) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        SectionHeader("Sản phẩm của tôi", onAddClick)
-        LazyColumn {
-            items(products.size) { index ->
-                ProductCard(products[index])
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        // Đưa SectionHeader quay trở lại
+        SectionHeader(title = "Sản phẩm của tôi", onAddClick = onAddClick)
+
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(products) { product ->
+                ProductCard(product, onEdit = { onEdit(product) }, onDelete = onDelete)
             }
+            item { Spacer(modifier = Modifier.height(100.dp)) }
         }
     }
 }
@@ -196,369 +180,226 @@ fun SectionHeader(title: String, onAddClick: () -> Unit) {
 }
 
 @Composable
-fun ProductCard(product: SellerProduct) {
+fun ProductCard(
+    product: SellerProductUIModel,
+    onEdit: () -> Unit,
+    onDelete: (String) -> Unit
+) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(BeigeCard)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                //painter = painterResource(product.imageRes),
-                painter = rememberAsyncImagePainter(
-                    model = product.imageUri ?: R.drawable.book6
-                ),
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(
+                model = product.imageUrl,
                 contentDescription = null,
-                modifier = Modifier
-                    .width(90.dp)
-                    .height(120.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.size(90.dp, 120.dp).clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Spacer(Modifier.width(16.dp))
             Column {
-                Text(product.title, fontWeight = FontWeight.Bold)
-                Text(product.author, fontSize = 13.sp)
-                Text("Trạng thái: ${product.status}", fontSize = 13.sp)
-                Text(product.price, color = Color.Red, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    SmallGrayButton("Sửa")
-                    Spacer(Modifier.width(6.dp))
-                    SmallGrayButton("SL: ${product.quantity}")
-                    Spacer(Modifier.width(6.dp))
-                    SmallGrayButton("Xóa")
+                Text(product.name, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(product.authorName, fontSize = 13.sp, color = Color.Gray)
+                Text("Tồn kho: ${product.quantity}", fontSize = 13.sp)
+                Text("${product.price.toInt()}đ", color = Color.Red, fontWeight = FontWeight.Bold)
+
+                Row(modifier = Modifier.padding(top = 8.dp)) {
+                    // Nút SỬA: Đã kích hoạt
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) { Text("Sửa", fontSize = 12.sp) }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Nút XÓA
+                    Button(
+                        onClick = { onDelete(product.id) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) { Text("Xóa", fontSize = 12.sp) }
                 }
             }
         }
     }
 }
 
-// Add Product
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddProductDialog(
+fun UpsertProductDialog(
+    categories: List<SellerCategoryItem>, // Danh sách lấy từ API GET (phần data.category)
+    initialProduct: SellerProductUIModel? = null,
     onDismiss: () -> Unit,
-    onAdd: (SellerProduct) -> Unit
+    onConfirm: (String, String, String, String, String, String, Uri?) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var author by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var imageRes by remember { mutableStateOf(R.drawable.book6) }
+    // Khởi tạo State: Nếu là Sửa (initialProduct != null) thì điền sẵn, nếu Thêm thì để trống
+    var name by remember { mutableStateOf(initialProduct?.name ?: "") }
+    var author by remember { mutableStateOf(initialProduct?.authorName ?: "") }
+    var desc by remember { mutableStateOf(initialProduct?.description ?: "") } // Đã lấy được description
+    var price by remember { mutableStateOf(initialProduct?.price?.toInt()?.toString() ?: "") }
+    var qty by remember { mutableStateOf(initialProduct?.quantity?.toString() ?: "") }
+
+    // Lấy Category ID hiện tại của sản phẩm để làm mặc định cho Dropdown
+    var selectedCatId by remember { mutableStateOf(initialProduct?.productCategoryId ?: "") }
+
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-
-//    val launcher = rememberLauncherForActivityResult(
-//        ActivityResultContracts.GetContent()
-//    ) { imageRes = R.drawable.book6 }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        imageUri = uri
-    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri = it }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                onAdd(
-                    SellerProduct(
-                        title = title,
-                        author = author,
-                        price = price,
-                        status = "Còn hàng",
-                        quantity = 1,
-                        imageUri = imageUri
-                    )
+        title = { Text(if (initialProduct == null) "Thêm sản phẩm mới" else "Cập nhật sản phẩm", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(name, { name = it }, label = { Text("Tên sách") }, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(author, { author = it }, label = { Text("Tác giả") }, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+
+                // Trường Mô tả: Hiển thị dữ liệu khi Cập nhật
+                OutlinedTextField(
+                    value = desc,
+                    onValueChange = { desc = it },
+                    label = { Text("Mô tả sản phẩm") },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    maxLines = 5
                 )
-            }) {
-                Text("Thêm")
+
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(price, { price = it }, label = { Text("Giá (VNĐ)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(qty, { qty = it }, label = { Text("Số lượng kho") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+
+                Spacer(Modifier.height(16.dp))
+                Text("Thể loại sách", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+
+                // --- Dropdown Category ---
+                var expanded by remember { mutableStateOf(false) }
+                // Tìm tên category tương ứng với ID đang chọn để hiển thị lên nhãn
+                val selectedCatName = categories.find { it.id == selectedCatId }?.name ?: "Chọn thể loại"
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCatName,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        categories.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat.name) },
+                                onClick = {
+                                    selectedCatId = cat.id // Lưu lại ID để gửi API
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Preview ảnh
+                if (imageUri != null) {
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp).clip(RoundedCornerShape(8.dp)).align(Alignment.CenterHorizontally),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Button(
+                    onClick = { launcher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = if(imageUri != null) TabGreen else PurpleTop)
+                ) {
+                    Text(if(imageUri == null) "Chọn ảnh sản phẩm" else "Đã chọn ảnh mới")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                // Khi nhấn Xác nhận, toàn bộ thông tin (bao gồm selectedCatId) sẽ được gửi đi
+                onClick = { onConfirm(name, author, desc, price, qty, selectedCatId, imageUri) },
+                enabled = name.isNotBlank() && price.isNotBlank() && selectedCatId.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = PinkButton)
+            ) {
+                Text("XÁC NHẬN", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Hủy")
-            }
-        },
-        title = { Text("Thêm sản phẩm") },
-        text = {
-            Column {
-                OutlinedTextField(title, { title = it }, label = { Text("Tên sách") })
-                OutlinedTextField(author, { author = it }, label = { Text("Tác giả") })
-                OutlinedTextField(price, { price = it }, label = { Text("Giá") })
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { launcher.launch("image/*") }) {
-                    Text("Chọn ảnh")
-                }
-            }
+            TextButton(onClick = onDismiss) { Text("HỦY", color = Color.Gray) }
         }
     )
 }
 
-// Order
+@Composable
+fun OrderSection(orders: List<SellerOrderUIModel>, onUpdate: (String, String) -> Unit) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        items(orders) { order ->
+            OrderCard(order, onUpdate)
+        }
+        item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
+}
 
 @Composable
-fun OrderSection(
-    orders: List<Order>,
-    onUpdateStatus: (String, String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Đơn hàng", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.Search, null, tint = YellowIcon)
-        }
+fun OrderCard(order: SellerOrderUIModel, onUpdate: (String, String) -> Unit) {
+    val nextLabel = when(order.status) {
+        "PENDING" -> "Xác nhận đơn"
+        "PROCESSING" -> "Bắt đầu giao"
+        else -> null
+    }
 
-        LazyColumn {
-            items(orders.size) { index ->
-                val buttonText =
-                    if (orders[index].id == "002") "Xác nhận" else "Đã giao"
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), colors = CardDefaults.cardColors(Color.White), border = BorderStroke(1.dp, Color.LightGray)) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Mã đơn: #${order.orderId.takeLast(8)}", fontWeight = FontWeight.Bold)
+            Text("Khách: ${order.customerName}", fontSize = 13.sp)
+            Text("Địa chỉ: ${order.fullAddress}", fontSize = 12.sp, color = Color.Gray)
+            Divider(Modifier.padding(vertical = 8.dp))
+            Row {
+                AsyncImage(model = order.imageUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)))
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text(order.productName, fontWeight = FontWeight.Medium)
+                    Text("Số lượng: ${order.quantity}", fontSize = 12.sp)
+                }
+            }
+            Text("Tổng: ${order.totalPrice}đ", color = Color.Red, modifier = Modifier.align(Alignment.End), fontWeight = FontWeight.Bold)
 
-                OrderCard(
-                    order = orders[index],
-                    //buttonText = buttonText,
-                    onUpdateStatus = onUpdateStatus
+            if (nextLabel != null) {
+                // Hiển thị nút bấm nếu Seller còn quyền chuyển trạng thái
+                Button(
+                    onClick = { onUpdate(order.orderId, order.status) },
+                    modifier = Modifier.align(Alignment.End).padding(top = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PinkButton)
+                ) {
+                    Text(nextLabel, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                // Nếu đang giao hoặc đã giao, chỉ hiện text thông báo
+                val statusColor = if (order.status == "DELIVERED") TabGreen else Color.Blue
+                val statusText = when(order.status) {
+                    "SHIPPING" -> "Đang giao hàng..."
+                    "DELIVERED" -> "Giao hàng thành công"
+                    "CANCELLED" -> "Đơn đã hủy"
+                    else -> order.status
+                }
+                Text(
+                    text = statusText,
+                    modifier = Modifier.align(Alignment.End).padding(top = 8.dp),
+                    color = statusColor,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
-    }
-}
-
-@Composable
-fun OrderCard(
-    order: Order,
-    onUpdateStatus: (String, String) -> Unit
-) {
-    val nextStatus = nextOrderStatus(order.status)
-    val buttonText = actionLabel(order.status)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(BeigeCard)
-    ) {
-        Column(Modifier.padding(12.dp)) {
-
-            Text("Mã đơn: #${order.id}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("Khách hàng: ${order.customer}  ·  ${order.date}", fontSize = 12.sp)
-
-            Spacer(Modifier.height(6.dp))
-
-            Text("Trạng thái: ${order.status}", fontSize = 12.sp)
-            Text("Tổng tiền: ${order.total}", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(Modifier.height(8.dp))
-
-            order.products.forEach {
-                OrderProductItem(it.title, it.quantity, it.price, it.imageRes)
-                Spacer(Modifier.height(6.dp))
-            }
-
-            Spacer(Modifier.height(8.dp))
-            Text("Địa chỉ: ${order.address}", fontSize = 12.sp)
-
-            Spacer(Modifier.height(12.dp))
-
-            Button(
-                onClick = {
-                    nextStatus?.let {
-                        onUpdateStatus(order.id, it)
-                    }
-                },
-                enabled = nextStatus != null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF48FB1)
-                )
-            ) {
-                Text(buttonText, fontSize = 12.sp, color = Color.White)
-            }
-        }
-    }
-}
-
-// dùng cho việc đổi 1 trạng thái sang trạng thái kế tiếp
-fun nextOrderStatus(current: String): String? = when (current) {
-    "Mới" -> "Đang xử lý"
-    "Đang xử lý" -> "Đang giao hàng"
-    "Đang giao hàng" -> "Đã giao"
-    else -> null
-}
-// Với mỗi trạng thái, nút bấm thể hiện hành động tiếp theo
-fun actionLabel(status: String): String = when (status) {
-    "Mới" -> "Xác nhận đơn"
-    "Đang xử lý" -> "Bắt đầu giao"
-    "Đang giao hàng" -> "Hoàn tất giao"
-    else -> "Hoàn tất"
-}
-
-@Composable
-fun OrderProductItem(
-    title: String,
-    quantity: Int,
-    price: String,
-    imageRes: Int
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            painter = painterResource(imageRes),
-            contentDescription = null,
-            modifier = Modifier
-                .width(48.dp)
-                .height(64.dp)
-                .clip(RoundedCornerShape(6.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(Modifier.width(8.dp))
-        Column {
-            Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text("Số lượng: $quantity", fontSize = 12.sp)
-            Text(price, fontSize = 12.sp, color = Color.Red)
-        }
-    }
-}
-
-// Common
-
-@Composable
-fun SmallGrayButton(text: String) {
-    Box(
-        modifier = Modifier
-            .background(Color.LightGray, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(text, fontSize = 12.sp)
-    }
-}
-
-// Previews
-
-@Preview(showBackground = true)
-@Composable
-fun Preview_Header_TopBar() {
-    Column {
-        SellerTopBar()
-        SellerTabBar(selected = -1) {}
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun Preview_Product_Tab() {
-    Column {
-        SellerTabBar(selected = 0) {}
-        ProductSection(
-            listOf(
-                SellerProduct("Muôn kiếp nhân sinh", "Nguyên Phong", "99.000đ", "Còn hàng", 50, null),
-                SellerProduct("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", "Hết hàng", 0, null)
-            )
-        ) {}
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun Preview_Header_Product_Tab() {
-    Column {
-        SellerTopBar()
-        SellerTabBar(selected = 0) {}
-        ProductSection(
-            listOf(
-                SellerProduct("Muôn kiếp nhân sinh", "Nguyên Phong", "99.000đ", "Còn hàng", 50, null),
-                SellerProduct("Cho tôi xin một vé đi tuổi thơ", "Nguyễn Nhật Ánh", "69.000đ", "Hết hàng", 0, null)
-            )
-        ) {}
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun Preview_Order_Without_Header() {
-    Column {
-        SellerTabBar(selected = 1) {}
-        OrderSection(
-            orders = listOf(
-                Order(
-                    "001",
-                    "Nguyễn Văn A",
-                    "12/12/2025",
-                    "Mới",
-                    "257.000đ",
-                    "Khu phố 34, P. Linh Xuân, TP.Hồ Chí Minh",
-                    listOf(
-                        OrderProduct("Muôn kiếp nhân sinh", 1, "99.000đ", R.drawable.book6),
-                        OrderProduct("Nhà giả kim", 2, "89.000đ", R.drawable.book8)
-                    )
-                ),
-                Order(
-                    "002",
-                    "Trần Thị B",
-                    "13/12/2025",
-                    "Đang xử lý",
-                    "480.000đ",
-                    "Ktx khu B, P. Linh Trung, TP. Hồ Chí Minh",
-                    listOf(
-                        OrderProduct("Muôn kiếp nhân sinh", 2, "99.000đ", R.drawable.book6),
-                        OrderProduct("Nhà giả kim", 3, "89.000đ", R.drawable.book8)
-                    )
-                )
-            ),
-            onUpdateStatus = { _, _ -> }
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun Preview_Order_Tab() {
-    Column {
-        SellerTopBar()
-        SellerTabBar(selected = 1) {}
-        OrderSection(
-            orders = listOf(
-                Order(
-                    "001",
-                    "Nguyễn Văn A",
-                    "12/12/2025",
-                    "Mới",
-                    "257.000đ",
-                    "Khu phố 34, P. Linh Xuân, TP.Hồ Chí Minh",
-                    listOf(
-                        OrderProduct("Muôn kiếp nhân sinh", 1, "99.000đ", R.drawable.book6),
-                        OrderProduct("Nhà giả kim", 2, "89.000đ", R.drawable.book8)
-                    )
-                ),
-                Order(
-                    "002",
-                    "Trần Thị B",
-                    "13/12/2025",
-                    "Đang xử lý",
-                    "480.000đ",
-                    "Ktx khu B, P. Linh Trung, TP. Hồ Chí Minh",
-                    listOf(
-                        OrderProduct("Muôn kiếp nhân sinh", 2, "99.000đ", R.drawable.book6),
-                        OrderProduct("Nhà giả kim", 3, "89.000đ", R.drawable.book8)
-                    )
-                )
-            ),
-            onUpdateStatus = { _, _ -> }
-        )
     }
 }

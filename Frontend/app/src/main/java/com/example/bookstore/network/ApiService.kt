@@ -15,12 +15,12 @@ import com.example.bookstore.model.products.ProductDetailResponse
 import com.example.bookstore.model.cart.CartDetailResponse
 import com.example.bookstore.model.cart.AddToCartRequest
 import com.example.bookstore.model.cart.UpdateCartItemRequest
-
 import com.example.bookstore.model.checkout.CheckoutReviewRequest
 import com.example.bookstore.model.checkout.CheckoutReviewResponse
 import com.example.bookstore.model.order.CreateOrderRequest
 import com.example.bookstore.model.order.OrderResponse
 import com.example.bookstore.model.userprofile.UserProfileResponse
+import com.example.bookstore.model.sellerpanel.*
 
 import retrofit2.Response
 import retrofit2.http.Body
@@ -34,6 +34,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.http.Multipart
 import retrofit2.http.Part
+import retrofit2.http.PartMap
 import retrofit2.http.Query
 
 interface ApiService {
@@ -123,5 +124,47 @@ interface ApiService {
         @Part("street") street: RequestBody,
         @Part("district") district: RequestBody,
         @Part("city") city: RequestBody
+    ): Response<Unit>
+
+    // Seller Panel API
+    // Lấy danh sách sản phẩm & categories của seller
+    @GET("/api/v1/seller-panel")
+    suspend fun getSellerProducts(): Response<SellerPanelResponse>
+
+    // 2. Tạo sản phẩm mới (Multipart)
+    @Multipart
+    @POST("/api/v1/seller-panel")
+    suspend fun createSellerProduct(
+        @Part image: MultipartBody.Part?,
+        @Part("name") name: RequestBody,
+        @Part("author_name") authorName: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("price") price: RequestBody,
+        @Part("quantity") quantity: RequestBody,
+        @Part("category_id") categoryId: RequestBody
+    ): Response<Unit>
+
+    // 3. Cập nhật sản phẩm (Multipart)
+    @Multipart
+    @PATCH("/api/v1/seller-panel/{id}")
+    suspend fun updateSellerProduct(
+        @Path("id") productId: String,
+        @Part image: MultipartBody.Part?,
+        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>
+    ): Response<Unit>
+
+    // 4. Xóa sản phẩm
+    @DELETE("/api/v1/seller-panel/{id}")
+    suspend fun deleteSellerProduct(@Path("id") productId: String): Response<Unit>
+
+    // 5. Lấy danh sách đơn hàng của seller
+    @GET("/api/v1/seller-panel/order")
+    suspend fun getSellerOrders(): Response<SellerOrderResponse>
+
+    // 6. Cập nhật trạng thái đơn hàng
+    @PATCH("/api/v1/seller-panel/order/{id}")
+    suspend fun updateSellerOrderStatus(
+        @Path("id") orderId: String,
+        @Body request: UpdateOrderStatusRequest
     ): Response<Unit>
 }

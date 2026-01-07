@@ -11,36 +11,34 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
+import coil.compose.AsyncImage
 import com.example.bookstore.R
 import com.example.bookstore.model.order.OrderUIModel
-import com.example.bookstore.network.ApiService
-import com.example.bookstore.repository.OrderRepository
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.text.NumberFormat
 import java.util.Locale
-import coil.compose.AsyncImage
 
+// --- ĐỊNH NGHĨA MÀU SẮC ---
 private val TealGreen = Color(0xFF17A590)
 private val GrayText = Color(0xFF757575)
-private val GrayArrow = Color(0xFFBDBDBD)
 private val PinkBtn = Color(0xFFF2AEBB)
 private val SuccessPriceColor = Color(0xFF2AD549)
+private val HeaderPurple = Color(0xFF8E8CD8)
 
 // HÀM ĐỊNH DẠNG TIỀN TỆ
 fun Double.toCurrencyString(): String {
@@ -57,7 +55,7 @@ class OrderFragment : Fragment(R.layout.fragment_order) {
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
 
         viewModel = ViewModelProvider(this, OrderViewModelFactory(requireContext()))
-                .get(OrderViewModel::class.java)
+            .get(OrderViewModel::class.java)
 
         viewModel.loadOrders()
 
@@ -72,21 +70,26 @@ class OrderFragment : Fragment(R.layout.fragment_order) {
                 isLoading = uiState.isLoading,
                 errorMessage = uiState.errorMessage,
                 onTabSelected = { viewModel.onTabSelected(it) },
-                onBackClick = { requireActivity().onBackPressedDispatcher.onBackPressed() },
-                onMessageClick = { viewModel.clearMessages() }
+                onBackClick = { findNavController().navigateUp() },
+                onMessageClick = { viewModel.clearMessages() },
+                // Gắn logic thực hiện hành động vào đây
+                onActionClick = { orderId, status ->
+                    viewModel.performOrderAction(orderId, status)
+                }
             )
         }
     }
 }
 
-// UI Composables
+// --- UI COMPONENTS ---
+
 @Composable
 fun OrdersHeader(totalMessages: Int, onBackClick: () -> Unit, onMessageClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
-            .background(Color(0xFF8E8CD8))
+            .background(HeaderPurple)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -95,21 +98,26 @@ fun OrdersHeader(totalMessages: Int, onBackClick: () -> Unit, onMessageClick: ()
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = onBackClick) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White) }
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
             Text(
                 text = "ĐƠN MUA",
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
-                textAlign = TextAlign.Center
+                color = Color.White
             )
             Box(contentAlignment = Alignment.TopEnd) {
-                IconButton(onClick = onMessageClick) { Icon(Icons.Filled.Chat, contentDescription = "Chat", tint = Color.White, modifier = Modifier.size(28.dp)) }
+                IconButton(onClick = onMessageClick) {
+                    Icon(Icons.Filled.Chat, contentDescription = "Chat", tint = Color.White, modifier = Modifier.size(26.dp))
+                }
                 if (totalMessages > 0) {
                     Box(
-                        modifier = Modifier.size(16.dp).background(Color.Red, shape = CircleShape).align(Alignment.TopEnd),
+                        modifier = Modifier.size(16.dp).background(Color.Red, CircleShape).align(Alignment.TopEnd),
                         contentAlignment = Alignment.Center
-                    ) { Text("$totalMessages", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    ) {
+                        Text("$totalMessages", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -117,101 +125,70 @@ fun OrdersHeader(totalMessages: Int, onBackClick: () -> Unit, onMessageClick: ()
 }
 
 @Composable
-fun OrderItem(order: OrderUIModel) {
-    Row(
+fun IndividualOrderCard(
+    order: OrderUIModel,
+    status: OrderStatus,
+    actionText: String,
+    onActionClick: (String, OrderStatus) -> Unit
+) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, PinkBtn, RoundedCornerShape(10.dp))
-            .background(Color(0xFFF5D3C4), RoundedCornerShape(10.dp))
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = order.imageUrl, // Sử dụng AsyncImage cho URL ảnh
-            contentDescription = order.productName,
-            modifier = Modifier.size(70.dp).background(Color.White, RoundedCornerShape(6.dp)).padding(4.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(order.productName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(order.authorName, fontSize = 12.sp, color = Color.Gray)
-            Text("Số lượng: ${order.quantity}", fontSize = 12.sp)
-            // Text("Trạng thái: ${order.status}", fontSize = 12.sp, color = TealGreen)
-        }
-        Text(
-            (order.totalPrice).toCurrencyString(),
-            modifier = Modifier.background(Color.White, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
-            fontSize = 12.sp,
-            color = Color.Black
-        )
-    }
-}
-
-@Composable
-fun SectionOrderCard(section: OrderDataSection) {
-    Card(
-        modifier = Modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(12.dp)),
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(section.status.label, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Danh sách Order Items
-            section.orders.forEach { order ->
-                OrderItem(order)
-                Spacer(modifier = Modifier.height(10.dp))
+            // Header: Mã đơn và Trạng thái
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Mã đơn: #${order.id.takeLast(6).uppercase()}", fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                Text(status.label, color = TealGreen, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
-            Spacer(modifier = Modifier.height(12.dp))
 
-            // Ghi chú trạng thái (Tùy chỉnh logic hiển thị)
-            val showNote = true // Giả định luôn hiển thị note
-            if(showNote){
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically){
-                    val note = when(section.status){
-                        OrderStatus.PENDING -> "Đơn hàng đang chờ xác nhận."
-                        OrderStatus.PROCESSING -> "Đơn hàng đang được chuẩn bị."
-                        OrderStatus.SHIPPING -> "Đơn hàng đã được vận chuyển."
-                        OrderStatus.DELIVERED -> "Đã giao hàng thành công."
-                        OrderStatus.CANCELLED -> "Đơn hàng đã bị hủy."
-                    }
-                    if(note.isNotEmpty()){
-                        Text(note, fontSize = 12.sp, color = TealGreen, modifier = Modifier.weight(1f))
-                        Text(">", color = GrayArrow, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
+            Divider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color.LightGray)
+
+            // Thông tin sản phẩm
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = order.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFF5F5F5)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(order.productName, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+                    Text(order.authorName, fontSize = 13.sp, color = GrayText)
+                    Text("Số lượng: ${order.quantity}", fontSize = 13.sp)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Tổng tiền
+            // Footer: Tổng tiền và Nút hành động
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("${section.orders.sumOf { it.quantity }} sản phẩm", color = GrayText, modifier = Modifier.padding(end = 8.dp))
-                Text("Tổng thanh toán:", color = Color.Black, modifier = Modifier.padding(end = 8.dp))
-                Text(
-                    section.totalPrice.toCurrencyString(), // Sử dụng totalPrice từ Section
-                    fontWeight = FontWeight.Bold,
-                    color = SuccessPriceColor // Màu xanh lá cây
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
+                Column {
+                    Text("Tổng thanh toán", fontSize = 11.sp, color = GrayText)
+                    Text(order.totalPrice.toCurrencyString(), fontWeight = FontWeight.Bold, color = SuccessPriceColor, fontSize = 17.sp)
+                }
 
-            // Button Hành động
-            if (section.actionText.isNotEmpty()) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End){
-                    Box(
-                        modifier = Modifier
-                            .shadow(4.dp, RoundedCornerShape(8.dp))
-                            .background(PinkBtn, RoundedCornerShape(8.dp))
-                            .clickable {}
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) { Text(section.actionText, color = Color.White, fontWeight = FontWeight.Bold) }
+                if (actionText.isNotEmpty()) {
+                    Button(
+                        onClick = { onActionClick(order.id, status) },
+                        colors = ButtonDefaults.buttonColors(
+                            // Màu xám cho nút Hủy, màu hồng cho các nút còn lại
+                            containerColor = if (status == OrderStatus.PENDING) Color(0xFFE0E0E0) else PinkBtn,
+                            contentColor = if (status == OrderStatus.PENDING) Color.DarkGray else Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(actionText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
         }
@@ -228,48 +205,75 @@ fun OrdersContent(
     errorMessage: String?,
     onTabSelected: (Int) -> Unit,
     onBackClick: () -> Unit,
-    onMessageClick: () -> Unit
+    onMessageClick: () -> Unit,
+    onActionClick: (String, OrderStatus) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFFF5F5F5))) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F8F8))) {
         OrdersHeader(totalMessages, onBackClick, onMessageClick)
-        TabRow(selectedTabIndex = selectedTabIndex, modifier = Modifier.fillMaxWidth(), containerColor = Color.White, contentColor = Color.Black) {
+
+        // Thanh Tab cuộn được nếu quá dài
+        ScrollableTabRow(
+            selectedTabIndex = selectedTabIndex,
+            edgePadding = 16.dp,
+            containerColor = Color.White,
+            contentColor = Color.Black,
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                    color = HeaderPurple
+                )
+            },
+            divider = {}
+        ) {
             tabs.forEachIndexed { index, title ->
-                Tab(selected = selectedTabIndex == index, onClick = { onTabSelected(index) }, modifier = Modifier.weight(1f)) {
-                    Text(text = title, color = Color.Black, fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.padding(vertical = 12.dp))
-                }
+                Tab(
+                    selected = selectedTabIndex == index,
+                    onClick = { onTabSelected(index) },
+                    text = {
+                        Text(
+                            text = title,
+                            fontSize = 13.sp,
+                            fontWeight = if(selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
             }
         }
 
+        val currentSection = orderSections.getOrNull(selectedTabIndex)
+
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .navigationBarsPadding(),
-            contentPadding = PaddingValues(
-                top = 16.dp,
-                bottom = 120.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+            contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 120.dp), // Padding bottom lớn né menu
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (isLoading) {
                 item {
-                    CircularProgressIndicator(modifier = Modifier.padding(top = 32.dp))
-                    Text("Đang tải đơn hàng...", modifier = Modifier.padding(top = 16.dp))
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = HeaderPurple)
+                    }
                 }
             } else if (errorMessage != null) {
                 item {
-                    Text("Lỗi: $errorMessage", color = Color.Red, modifier = Modifier.padding(32.dp))
+                    Text("Lỗi: $errorMessage", color = Color.Red, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
                 }
-            } else if (orderSections.isNotEmpty()) {
-                val currentSection = orderSections.getOrNull(selectedTabIndex)
-                if (currentSection != null) {
-                    item { SectionOrderCard(currentSection) }
-                } else {
-                    item { Text("Không tìm thấy đơn hàng nào trong mục này.", color = GrayText, modifier = Modifier.padding(32.dp)) }
+            } else if (currentSection == null || currentSection.orders.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Không có đơn hàng nào trong mục này.", color = GrayText)
+                    }
                 }
             } else {
-                item { Text("Không có đơn hàng nào.", color = GrayText, modifier = Modifier.padding(32.dp)) }
+                // Hiển thị danh sách các Card đơn lẻ
+                items(currentSection.orders.size) { index ->
+                    IndividualOrderCard(
+                        order = currentSection.orders[index],
+                        status = currentSection.status,
+                        actionText = currentSection.actionText,
+                        onActionClick = onActionClick
+                    )
+                }
             }
         }
     }

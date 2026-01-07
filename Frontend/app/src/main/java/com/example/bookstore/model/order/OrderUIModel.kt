@@ -1,6 +1,7 @@
 package com.example.bookstore.model.order
 
 data class OrderUIModel(
+    val id: String,
     val productId: String,
     val productName: String,
     val authorName: String,
@@ -17,6 +18,7 @@ data class OrderUIModel(
 fun OrderDetailItem.toUIModel(): OrderUIModel {
     val product = this.stock.product
     return OrderUIModel(
+        id = this.id,
         productId = product.id,
         productName = product.name,
         authorName = product.authorName,

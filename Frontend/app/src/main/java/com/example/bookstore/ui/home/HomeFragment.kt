@@ -1,6 +1,5 @@
 package com.example.bookstore.ui.home
 
-import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import androidx.compose.foundation.Image
@@ -34,9 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import com.example.bookstore.R
@@ -54,7 +51,6 @@ import androidx.navigation.fragment.findNavController
 import com.example.bookstore.ui.theme.BookstoreTheme
 import androidx.fragment.app.viewModels
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextField
@@ -65,8 +61,8 @@ import java.text.NumberFormat
 import java.util.Locale
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextStyle
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
     private val viewModel: HomeViewModel by viewModels {
@@ -241,16 +237,21 @@ fun HomeHeader(
             TextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                placeholder = { Text("Tìm kiếm sách...", fontSize = 14.sp) },
+                placeholder = {
+                    Text("Tìm kiếm sách...", fontSize = 14.sp)
+                },
                 singleLine = true,
-                modifier = Modifier.weight(1f).padding(start = 12.dp).height(50.dp),
+                textStyle = TextStyle(fontSize = 14.sp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
             )
             IconButton(onClick = onCloseSearch) {
                 Icon(Icons.Default.Close, null, tint = Color.White)

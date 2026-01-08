@@ -19,6 +19,7 @@ import com.example.bookstore.model.checkout.CheckoutReviewRequest
 import com.example.bookstore.model.checkout.CheckoutReviewResponse
 import com.example.bookstore.model.order.CreateOrderRequest
 import com.example.bookstore.model.order.OrderResponse
+import com.example.bookstore.model.products.ReviewsResponse
 import com.example.bookstore.model.products.SubmitReviewRequest
 import com.example.bookstore.model.userprofile.UserProfileResponse
 import com.example.bookstore.model.sellerpanel.*
@@ -117,6 +118,11 @@ interface ApiService {
         @Path("productId") productId: String,
         @Body request: SubmitReviewRequest
     ): Response<Unit>
+
+    @GET("api/v1/reviews/{productId}")
+    suspend fun getAllReviews(
+        @Path("productId") productId: String
+    ): Response<ReviewsResponse>
 
     @Multipart
     @PATCH("/api/v1/user-profile")

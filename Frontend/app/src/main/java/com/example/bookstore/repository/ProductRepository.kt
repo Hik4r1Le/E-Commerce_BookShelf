@@ -1,6 +1,7 @@
 package com.example.bookstore.repository
 
 import com.example.bookstore.model.products.HomeProductResponse
+import com.example.bookstore.model.products.ProductCommentUI
 import com.example.bookstore.model.products.ProductDetailResponse
 
 import com.example.bookstore.network.ApiService
@@ -54,6 +55,33 @@ class ProductRepository(
 
                 if (response.isSuccessful) {
                     Result.success(Unit)
+                } else {
+                    Result.failure(Exception(getErrorMessage(response)))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Connection error: ${e.message}", e))
+            }
+        }
+    }
+
+    suspend fun getAllReviews(productId: String): Result<List<ProductCommentUI>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.getAllReviews(productId)
+
+                if (response.isSuccessful) {
+                    response.body()?.let { reviewsResponse ->
+                        // Map API response to ProductCommentUI
+                        val comments = reviewsResponse.data.map { review ->
+                            ProductCommentUI(
+                                id = review.id,
+                                username = review.username ?: review.user?.username ?: "Anonymous",
+                                rating = review.rating.toDouble(),
+                                comment = review.comment
+                            )
+                        }
+                        Result.success(comments)
+                    } ?: Result.failure(Exception("Response body is empty"))
                 } else {
                     Result.failure(Exception(getErrorMessage(response)))
                 }

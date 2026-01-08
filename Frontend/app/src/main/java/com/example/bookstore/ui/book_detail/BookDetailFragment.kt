@@ -60,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import coil.compose.AsyncImage
@@ -93,7 +94,7 @@ class BookDetailFragment : Fragment(R.layout.fragment_book_detail) {
                 androidx.compose.foundation.layout.Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding()  // ★★ Fix for top spacing + status bar issue
+                        .statusBarsPadding()
                 ) {
                     BookDetailScreen(
                         viewModel = viewModel,
@@ -134,28 +135,41 @@ fun Double.toCurrencyString(): String {
     val formatter = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
     return formatter.format(this).replace("₫", "VNĐ")
 }
-
 @Composable
 fun BookDetailScreen(
     viewModel: BookDetailViewModel,
     onBackClick: () -> Unit,
     onAddToCart: (String, Int) -> Unit
 ) {
-    val productDetail = viewModel.productDetail // Dữ liệu thật
+    val productDetail = viewModel.productDetail
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
     val isAddingToCart = viewModel.isAddingToCart
 
+    val allReviews = viewModel.allReviews
+    val hasMoreReviews = viewModel.hasMoreReviews
+    val isLoadingMoreReviews = viewModel.isLoadingMoreReviews
+
     val quantityState = remember { mutableStateOf(1) }
     val quantity = quantityState.value
 
+    //compute live AVG, else fallback to API
+    val avgRating by remember(productDetail, allReviews) {
+        derivedStateOf {
+            if (allReviews.isNotEmpty()) {
+                allReviews.map { it.rating }.average()
+            } else {
+                productDetail?.ratingAvg ?: 0.0
+            }
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF9F9F9))
     ) {
-        // Header (top bar)
         BookDetailHeader(onBackClick = onBackClick)
+
         if (isLoading) {
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -168,28 +182,30 @@ fun BookDetailScreen(
         } else if (errorMessage != null) {
             Text("Lỗi: $errorMessage", color = Color.Red, modifier = Modifier.padding(16.dp))
         } else if (productDetail != null) {
-            val book = productDetail // Sử dụng dữ liệu đã tải
+            val book = productDetail
 
-            // Main scrollable content
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp)
             ) {
                 item {
+                    //BookDetailCard(book = book, onAddToCart = onAddToCart)
                     BookDetailCard(
                         book = book,
+                        rating = avgRating,
                         onAddToCart = onAddToCart
                     )
                 }
 
+
                 item {
                     BookDescriptionCard(description = book.description)
                 }
+
                 item {
                     UserRatingInputCard(
                         onSubmitReview = { rating, comment ->
-                            val productId = ""
                             viewModel.submitReview(book.id, rating, comment)
                         },
                         isSubmitting = viewModel.isSubmittingReview,
@@ -198,11 +214,10 @@ fun BookDetailScreen(
                     )
                 }
 
-
-                // Reader Comments
+                // Reader Comments Header
                 item {
                     Text(
-                        text = "Bình luận của người đọc (${book.comments.size})",
+                        text = "Bình luận của người đọc (${allReviews.size})",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = Color.Black,
@@ -210,29 +225,60 @@ fun BookDetailScreen(
                     )
                 }
 
-                items(book.comments) { comment ->
+                // show first 3 reviews or all if loaded
+                val reviewsToShow = if (hasMoreReviews) allReviews.take(3) else allReviews
+
+                items(reviewsToShow) { comment ->
                     UserCommentCard(
                         username = comment.username,
-                        rating = comment.rating.toFloat(), // Chuyển đổi Double sang Float
+                        rating = comment.rating.toFloat(),
                         comment = comment.comment
                     )
                 }
 
-                item { Spacer(modifier = Modifier.height(80.dp)) } // space for footer overlap
+                    item {
+                        Button(
+                            onClick = { viewModel.loadAllReviews(book.id) },
+                            enabled = !isLoadingMoreReviews,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFF5ADBC)
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            if (isLoadingMoreReviews) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Đang tải...")
+                            } else {
+                                Text(
+                                    text = "Xem thêm bình luận",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color.Black
+                                )
+                            }
+                        }
+                    }
+
+                item { Spacer(modifier = Modifier.height(80.dp)) }
             }
 
-            // Footer
             FooterSection(
                 quantity = quantity,
                 onIncrease = { quantityState.value++ },
                 onDecrease = { if (quantityState.value > 1) quantityState.value-- },
-                // Tính giá: Giá gốc * (1 - discount) * số lượng
                 price = book.price * (1 - book.discount) * quantity,
                 onAddToCart = { onAddToCart(book.id, quantity) },
-                isLoading= isLoading
+                isLoading = isLoading
             )
         } else {
-            // Hiển thị khi không tìm thấy sản phẩm
             Text("Không tìm thấy sản phẩm này.", modifier = Modifier.fillMaxSize().padding(32.dp))
         }
     }
@@ -282,6 +328,7 @@ fun BookDetailHeader(onBackClick: () -> Unit) {
 @Composable
 fun BookDetailCard(
     book: ProductDetailUI,
+    rating: Double,
     onAddToCart: (String, Int) -> Unit
 ) {
     Card(
@@ -342,7 +389,8 @@ fun BookDetailCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                RatingBar(rating = book.ratingAvg.toFloat())
+                //RatingBar(rating = book.ratingAvg.toFloat())
+                RatingBar(rating = rating.toFloat())
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -591,7 +639,6 @@ fun UserRatingInputCard(
     var commentText by remember { mutableStateOf("") }
     var isExpanded by remember { mutableStateOf(false) }
 
-    // Auto-collapse after successful submission
     LaunchedEffect(submitSuccess) {
         if (submitSuccess) {
             selectedRating = 0
@@ -759,7 +806,6 @@ fun UserRatingInputCard(
         }
     }
 }
-
 
 @Preview
 @Composable

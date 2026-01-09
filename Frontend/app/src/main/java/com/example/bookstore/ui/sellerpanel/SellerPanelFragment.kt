@@ -35,6 +35,7 @@ import androidx.navigation.fragment.findNavController
 import coil.compose.AsyncImage
 import com.example.bookstore.R
 import com.example.bookstore.model.sellerpanel.*
+import androidx.compose.ui.window.DialogProperties
 
 // Color
 
@@ -246,16 +247,46 @@ fun UpsertProductDialog(
     var selectedCatId by remember { mutableStateOf(initialProduct?.productCategoryId ?: "") }
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+
+    var isAttempted by remember { mutableStateOf(false) }
+
+    val isNameError = isAttempted && name.isBlank()
+    val isAuthorError = isAttempted && author.isBlank()
+    val isDescError = isAttempted && desc.isBlank()
+    val isPriceError = isAttempted && (price.isBlank() || price.toDoubleOrNull() == null)
+    val isQtyError = isAttempted && (qty.isBlank() || qty.toIntOrNull() == null)
+    val isCatError = isAttempted && selectedCatId.isBlank()
+    val isImageError = isAttempted && imageUri == null && initialProduct == null
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { imageUri = it }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,       // Cho phép bấm nút Back của hệ thống để thoát
+            dismissOnClickOutside = false    // KHÔNG cho phép bấm ra ngoài để thoát
+        ),
         title = { Text(if (initialProduct == null) "Thêm sản phẩm mới" else "Cập nhật sản phẩm", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(name, { name = it }, label = { Text("Tên sách") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Tên sách") },
+                    isError = isNameError,
+                    supportingText = { if (isNameError) Text("Vui lòng nhập tên sách") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(author, { author = it }, label = { Text("Tác giả") }, modifier = Modifier.fillMaxWidth())
+
+                OutlinedTextField(
+                    value = author,
+                    onValueChange = { author = it },
+                    label = { Text("Tác giả") },
+                    isError = isAuthorError,
+                    supportingText = { if (isAuthorError) Text("Vui lòng nhập tên tác giả") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(8.dp))
 
                 // Trường Mô tả: Hiển thị dữ liệu khi Cập nhật
@@ -263,16 +294,34 @@ fun UpsertProductDialog(
                     value = desc,
                     onValueChange = { desc = it },
                     label = { Text("Mô tả sản phẩm") },
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                    maxLines = 5
+                    isError = isDescError,
+                    supportingText = { if (isDescError) Text("Vui lòng nhập mô tả") },
+                    modifier = Modifier.fillMaxWidth().height(120.dp)
                 )
-
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(price, { price = it }, label = { Text("Giá (VNĐ)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(qty, { qty = it }, label = { Text("Số lượng kho") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
 
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Giá (VNĐ)") },
+                    isError = isPriceError,
+                    supportingText = { if (isPriceError) Text("Giá không hợp lệ") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = qty,
+                    onValueChange = { qty = it },
+                    label = { Text("Số lượng kho") },
+                    isError = isQtyError,
+                    supportingText = { if (isQtyError) Text("Số lượng không hợp lệ") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(16.dp))
+
                 Text("Thể loại sách", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color.Gray)
 
                 // --- Dropdown Category ---
@@ -288,6 +337,8 @@ fun UpsertProductDialog(
                         value = selectedCatName,
                         onValueChange = {},
                         readOnly = true,
+                        isError = isCatError,
+                        supportingText = { if (isCatError) Text("Vui lòng chọn thể loại") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -320,17 +371,31 @@ fun UpsertProductDialog(
                 Button(
                     onClick = { launcher.launch("image/*") },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = if(imageUri != null) TabGreen else PurpleTop)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isImageError) Color.Red else (if(imageUri != null) TabGreen else PurpleTop)
+                    )
                 ) {
                     Text(if(imageUri == null) "Chọn ảnh sản phẩm" else "Đã chọn ảnh mới")
+                }
+                if (isImageError) {
+                    Text("Ảnh là bắt buộc đối với sản phẩm mới", color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         },
         confirmButton = {
             Button(
                 // Khi nhấn Xác nhận, toàn bộ thông tin (bao gồm selectedCatId) sẽ được gửi đi
-                onClick = { onConfirm(name, author, desc, price, qty, selectedCatId, imageUri) },
-                enabled = name.isNotBlank() && price.isNotBlank() && selectedCatId.isNotBlank(),
+                onClick = {
+                    isAttempted = true
+
+                    val isValid = name.isNotBlank() && author.isNotBlank() && desc.isNotBlank() &&
+                            price.isNotBlank() && qty.isNotBlank() && selectedCatId.isNotBlank() &&
+                            (initialProduct != null || imageUri != null)
+
+                    if (isValid) {
+                        onConfirm(name, author, desc, price, qty, selectedCatId, imageUri)
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = PinkButton)
             ) {
                 Text("XÁC NHẬN", fontWeight = FontWeight.Bold)

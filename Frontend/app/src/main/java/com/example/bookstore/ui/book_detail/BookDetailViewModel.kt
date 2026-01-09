@@ -11,6 +11,7 @@ import com.example.bookstore.repository.CartRepository
 import com.example.bookstore.model.cart.AddToCartRequest
 import com.example.bookstore.repository.ProductRepository
 import com.example.bookstore.model.products.ProductDetailUI
+import com.example.bookstore.model.products.ProductCommentUI
 import com.example.bookstore.model.products.toUIModel
 
 class BookDetailViewModel(
@@ -28,11 +29,19 @@ class BookDetailViewModel(
     var isAddingToCart by mutableStateOf(false)
         private set
 
-    // ★ NEW: Review submission states
     var isSubmittingReview by mutableStateOf(false)
         private set
 
     var reviewSubmitSuccess by mutableStateOf(false)
+        private set
+
+    var isLoadingMoreReviews by mutableStateOf(false)
+        private set
+
+    var hasMoreReviews by mutableStateOf(false)
+        private set
+
+    var allReviews by mutableStateOf<List<ProductCommentUI>>(emptyList())
         private set
 
     fun loadProductDetail(productId: String) {
@@ -45,13 +54,49 @@ class BookDetailViewModel(
             val result = productRepository.getProductDetail(productId)
 
             result.onSuccess { response ->
-                productDetail = response.toUIModel()
+                // ★ toUIModel() returns ProductDetailUI? (nullable), so we need to handle null
+                val product = response.toUIModel()
+                if (product != null) {
+                    productDetail = product
+                    // ★ Initialize reviews list - product is non-null here
+                    allReviews = product.comments
+                    // ★ Check if there are more reviews to load (initially shows 3)
+                    hasMoreReviews = product.comments.size > 3
+                } else {
+                    errorMessage = "Không thể tải thông tin sản phẩm"
+                    productDetail = null
+                    allReviews = emptyList()
+                    hasMoreReviews = false
+                }
             }.onFailure { e ->
                 errorMessage = e.message
                 productDetail = null
+                allReviews = emptyList()
+                hasMoreReviews = false
             }
 
             isLoading = false
+        }
+    }
+
+    // Load all reviews from API
+    fun loadAllReviews(productId: String) {
+        if (isLoadingMoreReviews) return
+
+        viewModelScope.launch {
+            isLoadingMoreReviews = true
+            errorMessage = null
+
+            val result = productRepository.getAllReviews(productId)
+
+            result.onSuccess { reviews ->
+                allReviews = reviews
+                hasMoreReviews = false // No more to load
+            }.onFailure { e ->
+                errorMessage = e.message
+            }
+
+            isLoadingMoreReviews = false
         }
     }
 
@@ -82,7 +127,7 @@ class BookDetailViewModel(
         }
     }
 
-    // ★ NEW: Submit review function
+    // Submit review function
     fun submitReview(productId: String, rating: Int, comment: String, onSuccess: () -> Unit = {}) {
         if (isSubmittingReview) return
 
@@ -95,9 +140,11 @@ class BookDetailViewModel(
 
             result.onSuccess {
                 reviewSubmitSuccess = true
-                // Reload product detail to show new review
+                //Reload product detail to get updated rating_avg
                 productDetail = null
                 loadProductDetail(productId)
+                // reload all reviews to show the new one
+                loadAllReviews(productId)
                 onSuccess()
             }.onFailure { e ->
                 errorMessage = e.message

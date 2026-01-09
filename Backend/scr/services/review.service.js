@@ -19,9 +19,9 @@ export const findReviewByProductId = async (productId, skip, take) =>
                 }
             }
         },
-        null,
-        skip,
-        take
+        {
+            updated_at: "desc"
+        },
     )
 
 export const updateReviewDetail = async (userId, reviewId, rating, comment) => 

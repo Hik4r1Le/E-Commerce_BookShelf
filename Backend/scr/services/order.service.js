@@ -1,4 +1,4 @@
-import { findManyOrder, createManyOrder, deleteManyOrder } from "../repositories/order.repository.js";
+import { findManyOrder, createManyOrder, deleteManyOrder, updateOrder } from "../repositories/order.repository.js";
 import { deleteManyCart } from "../repositories/cart.repository.js"
 import { createAddress } from "../repositories/address.repository.js";
 
@@ -85,5 +85,15 @@ export const findOrderDetail = async (userId) =>
         }
     );
 
-
+export const updateOrderStatusDetail = async (userId, orderId, newStatus) => {
+    await updateOrder(
+        {
+            id: orderId,
+            user_id: userId,
+        },
+        {
+            status: newStatus
+        }
+    )
+}
 

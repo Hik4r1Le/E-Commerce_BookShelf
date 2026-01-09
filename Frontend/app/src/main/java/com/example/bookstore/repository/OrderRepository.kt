@@ -2,6 +2,7 @@ package com.example.bookstore.repository
 
 import com.example.bookstore.model.order.CreateOrderRequest
 import com.example.bookstore.model.order.OrderResponse
+import com.example.bookstore.model.sellerpanel.UpdateOrderStatusRequest
 import com.example.bookstore.network.ApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -63,7 +64,7 @@ class OrderRepository(
     suspend fun updateOrderStatus(orderId: String, newStatus: String): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getOrders()
+                val response = apiService.updateOrderStatus(orderId, UpdateOrderStatusRequest(newStatus))
                 if (response.isSuccessful) {
                     Result.success(Unit)
                 } else {

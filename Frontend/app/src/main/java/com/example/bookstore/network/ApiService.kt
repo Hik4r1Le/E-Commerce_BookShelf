@@ -108,15 +108,16 @@ interface ApiService {
     @GET("/api/v1/order")
     suspend fun getOrders(): Response<OrderResponse>
 
+    // 6. Cập nhật trạng thái đơn hàng từ người mua
+    @PATCH("/api/v1/order/{id}")
+    suspend fun updateOrderStatus(
+        @Path("id") orderId: String,
+        @Body request: UpdateOrderStatusRequest
+    ): Response<Unit>
+
     // User Profile API
     @GET("/api/v1/user-profile")
     suspend fun getUserProfile(): Response<UserProfileResponse>
-
-    @POST("api/v1/reviews/{productId}")
-    suspend fun submitReview(
-        @Path("productId") productId: String,
-        @Body request: SubmitReviewRequest
-    ): Response<Unit>
 
     @Multipart
     @PATCH("/api/v1/user-profile")
@@ -168,10 +169,17 @@ interface ApiService {
     @GET("/api/v1/seller-panel/order")
     suspend fun getSellerOrders(): Response<SellerOrderResponse>
 
-    // 6. Cập nhật trạng thái đơn hàng
+    // 6. Cập nhật trạng thái đơn hàng từ seller
     @PATCH("/api/v1/seller-panel/order/{id}")
     suspend fun updateSellerOrderStatus(
         @Path("id") orderId: String,
         @Body request: UpdateOrderStatusRequest
+    ): Response<Unit>
+
+    // API thêm review cho sản phẩm
+    @POST("api/v1/reviews/{productId}")
+    suspend fun submitReview(
+        @Path("productId") productId: String,
+        @Body request: SubmitReviewRequest
     ): Response<Unit>
 }

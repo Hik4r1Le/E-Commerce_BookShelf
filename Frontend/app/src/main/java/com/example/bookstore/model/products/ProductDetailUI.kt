@@ -32,7 +32,7 @@ fun ProductDetailResponse.toUIModel(): ProductDetailUI? {
     val comments = product.review?.map { review ->
         ProductCommentUI(
             id = review.id ?: "",
-            username = review.user?.select?.username ?: review.username ?: "Ẩn danh",
+            username = review.user?.username ?: review.username ?: "Ẩn danh",
             rating = review.rating ?: 0.0,
             comment = review.comment ?: ""
         )

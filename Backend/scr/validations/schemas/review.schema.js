@@ -85,13 +85,13 @@ export const findReviewSchema =
                 skip: z
                     .preprocess(
                         (v) => (v === undefined ? 0 : Number(v)),
-                        z.number().int().nonnegative().default(0)
+                        z.number().int().nonnegative()
                     ),
 
                 take: z
                     .preprocess(
                         (v) => (v === undefined ? 10 : Number(v)),
-                        z.number().int().positive().max(100).default(5)
+                        z.number().int().positive().max(100)
                     ),
             }).strip(),
     });

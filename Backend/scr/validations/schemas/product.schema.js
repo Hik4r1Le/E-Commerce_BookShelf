@@ -91,13 +91,13 @@ export const getProductSchema =
             skip: z
                 .preprocess(
                     (v) => (v === undefined ? 0 : Number(v)),
-                    z.number().int().nonnegative().default(0)
+                    z.number().int().nonnegative()
                 ),
 
             take: z
                 .preprocess(
                     (v) => (v === undefined ? 30 : Number(v)),
-                    z.number().int().positive().max(100).default(30)
+                    z.number().int().positive().max(100)
                 ),
         }).strip(), // không lỗi, nhưng các field ngoài những field được liệt kê sẽ bị bỏ đi
     });

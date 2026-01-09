@@ -82,7 +82,6 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            // Giả sử repository của bạn có hàm updateStatus tương tự seller
             repository.updateOrderStatus(orderId, nextStatus).onSuccess {
                 loadOrders() // Tải lại danh sách sau khi cập nhật thành công
             }.onFailure { e ->

@@ -29,6 +29,24 @@ const quantitySchema = z.preprocess(
         .nonnegative("Số lượng phải là số nguyên >= 0")
 );
 
+export const findSellerProductSchema =
+    z.object({
+        query: z
+            .object({
+                skip: z
+                    .preprocess(
+                        (v) => (v === undefined ? 0 : Number(v)),
+                        z.number().int().nonnegative()
+                    ),
+
+                take: z
+                    .preprocess(
+                        (v) => (v === undefined ? 15 : Number(v)),
+                        z.number().int().positive().max(100)
+                    ),
+            }).strip(),
+    });
+
 export const createSellerProductSchema = z.object({
     body: z.object({
         name: nameSchema,

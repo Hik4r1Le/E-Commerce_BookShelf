@@ -4,7 +4,8 @@ import fs from "fs"
 export const getSellerProduct = async (req, res, next) => {
     try {
         const sellerId = req.user.id;
-        const sellerProduct = await findManySellerProductDetail(sellerId);
+        const { skip, take } = req.validated.query;
+        const sellerProduct = await findManySellerProductDetail(sellerId, skip, take);
         res.status(200).json({ success: true, data: sellerProduct });
     } catch (error) {
         next(error)

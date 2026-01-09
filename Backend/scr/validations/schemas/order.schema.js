@@ -146,6 +146,30 @@ export const createOrderSchema =
         })
     });
 
+const orderStatusEnum = z.enum([
+    "PENDING",
+    "CONFIRMED",
+    "PROCESSING",
+    "READY_FOR_PICKUP",
+    "SHIPPING",
+    "DELIVERED",
+    "CANCELLED",
+    "RETURN_REQUESTED",
+    "RETURNED",
+    "REFUNDED",
+]);
+
+export const updateOrderSchema = z.object({
+    params: z
+        .object({
+            id: idStringSchema,
+        })
+        .strict(),
+    body: z.object({
+        status: orderStatusEnum,
+    }).strip()
+})
+
 const parseOrderIdPreprocess = (value) => {
     if (value === undefined || value === null) return undefined;
     if (Array.isArray(value)) return value;

@@ -1,11 +1,24 @@
-import { findManySellerProduct, findManyCategory, findManySellerOrder, createSellerProduct, updateSellerProduct, updateSellerOrder, deleteSellerProduct, updateManySellerProduct } from "../repositories/sellerPanel.repository.js";
+import { findManySellerProduct, findManyCategory, findManySellerOrder, createSellerProduct, updateSellerProduct, updateSellerOrder, deleteSellerProduct, updateManySellerProduct, countSellerProduct } from "../repositories/sellerPanel.repository.js";
 import cloudinary from "../config/cloudinary.config.js"
 import { v4 as uuidv4 } from "uuid";
 
-export const findManySellerProductDetail = async (sellerId) => {
+export const findManySellerProductDetail = async (sellerId, skip, take) => {
+    let finalSkip = skip;
+    if (skip === 0) {
+        const total = await countSellerProduct({
+            seller_id: sellerId,
+            image_url: { not: "" },
+        });
+
+        if (total > take) {
+            finalSkip = Math.floor(Math.random() * (total - take));
+        }
+    }
+
     const product = await findManySellerProduct(
         {
-            seller_id: sellerId
+            seller_id: sellerId,
+            image_url: { not: "" },
         },
         {
             id: true,
@@ -30,7 +43,10 @@ export const findManySellerProductDetail = async (sellerId) => {
                     }
                 }
             }
-        }
+        },
+        null,
+        finalSkip, 
+        take
     );
 
     const category = await findManyCategory();
@@ -70,6 +86,9 @@ export const createSellerProductDetail = async (sellerId, image, productData = {
             description: productData.description,
             price: productData.price,
             image_url: productImageUrl,
+            rating_avg: 0.0,
+            rating_count: 0,
+            sold_count: 0,
             release_date: new Date(),
             productCategory: {
                 create: {

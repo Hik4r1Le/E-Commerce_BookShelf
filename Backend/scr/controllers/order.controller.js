@@ -1,4 +1,4 @@
-import { findOrderDetail, createOrderDetail, deleteManyOrderDetail } from "../services/order.service.js"
+import { findOrderDetail, createOrderDetail, deleteManyOrderDetail, updateOrderStatusDetail } from "../services/order.service.js"
 
 export const addOrder = async (req, res, next) => {
     try {
@@ -21,10 +21,13 @@ export const getOrder = async (req, res, next) => {
     }
 }
 
-export const updateOrder = async (req, res, next) => {
+export const updateOrderStatus = async (req, res, next) => {
     try {
-
-        res.status(200).json({ success: true });
+        const userId = req.user.id;
+        const orderId = req.validated.params.id;
+        const newStatus = req.validated.body.status;
+        await updateOrderStatusDetail(userId, orderId, newStatus);
+        res.status(201).json({ success: true });
     } catch (error) {
         next(error);
     }

@@ -53,10 +53,6 @@ data class ProductReview(
 )
 
 data class ProductReviewUser(
-    val select: ProductReviewSelect?
-)
-
-data class ProductReviewSelect(
     val username: String?
 )
 

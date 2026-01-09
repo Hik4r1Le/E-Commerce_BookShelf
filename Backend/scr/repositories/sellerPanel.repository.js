@@ -4,6 +4,9 @@ import { queryBuilder } from "../utils/query.util.js";
 export const findManySellerProduct = async (filter, option, orderBy, skip, take) =>
     await prisma.product.findMany(queryBuilder(filter, option, null, orderBy, skip, take));
 
+export const countSellerProduct = async (filter) =>
+    await prisma.product.count(queryBuilder(filter));
+
 export const findManyCategory = async () => {
     return await prisma.category.findMany({
         select: {

@@ -46,8 +46,7 @@ export const findProductById = async (productId) =>
                                 }
                             }
                         },
-                        orderBy: { created_at: "desc" },
-                        take: 3
+                        orderBy: { updated_at: "desc" },
                     }
                 }
             },

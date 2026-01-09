@@ -44,8 +44,10 @@ export const findManySellerProductDetail = async (sellerId, skip, take) => {
                 }
             }
         },
-        null,
-        finalSkip, 
+        {
+            updated_at: "desc",
+        },
+        null, 
         take
     );
 
